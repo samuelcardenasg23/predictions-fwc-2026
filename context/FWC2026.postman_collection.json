@@ -13,6 +13,16 @@
       "key": "token",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "match_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -23,64 +33,202 @@
           "name": "Register",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"usuario@example.com\",\n  \"name\": \"Nombre Apellido\",\n  \"password\": \"password123\"\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.access_token) {",
-                  "  pm.collectionVariables.set('token', res.access_token);",
-                  "}"
-                ]
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const res = pm.response.json();",
+                "if (res.access_token) pm.collectionVariables.set('token', res.access_token);",
+                "if (res.user?.id) pm.collectionVariables.set('user_id', res.user.id);"
+              ]
             }
-          ]
+          }]
         },
         {
           "name": "Login",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"usuario@example.com\",\n  \"password\": \"password123\"\n}"
             }
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.access_token) {",
-                  "  pm.collectionVariables.set('token', res.access_token);",
-                  "}"
-                ]
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const res = pm.response.json();",
+                "if (res.access_token) pm.collectionVariables.set('token', res.access_token);",
+                "if (res.user?.id) pm.collectionVariables.set('user_id', res.user.id);"
+              ]
             }
-          ]
+          }]
         },
         {
           "name": "Me (perfil autenticado)",
           "request": {
             "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Matches",
+      "item": [
+        {
+          "name": "GET All Matches",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/matches",
+              "host": ["{{base_url}}"],
+              "path": ["matches"]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const res = pm.response.json();",
+                "if (Array.isArray(res) && res.length > 0) pm.collectionVariables.set('match_id', res[0].id);"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "GET Group Stage Matches",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/matches?phase=GROUP_STAGE",
+              "host": ["{{base_url}}"],
+              "path": ["matches"],
+              "query": [{ "key": "phase", "value": "GROUP_STAGE" }]
+            }
+          }
+        },
+        {
+          "name": "GET Knockout Matches",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/matches?phase=KNOCKOUT",
+              "host": ["{{base_url}}"],
+              "path": ["matches"],
+              "query": [{ "key": "phase", "value": "KNOCKOUT" }]
+            }
+          }
+        },
+        {
+          "name": "GET Single Match",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH Match (admin — update knockout slot)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/matches/{{match_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["matches", "{{match_id}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"homeTeam\": \"Argentina\",\n  \"awayTeam\": \"France\",\n  \"scheduledAt\": \"2026-07-02T21:00:00.000Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Predictions",
+      "item": [
+        {
+          "name": "PUT Single Prediction (auto-save)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/predictions/{{match_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["predictions", "{{match_id}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"homeScore\": 2,\n  \"awayScore\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "POST Bulk Predictions",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/predictions/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["predictions", "bulk"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"predictions\": [\n    { \"matchId\": \"<match_id_1>\", \"homeScore\": 2, \"awayScore\": 0 },\n    { \"matchId\": \"<match_id_2>\", \"homeScore\": 1, \"awayScore\": 1 },\n    { \"matchId\": \"<match_id_3>\", \"homeScore\": 0, \"awayScore\": 2 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "GET My Predictions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/predictions/me",
+              "host": ["{{base_url}}"],
+              "path": ["predictions", "me"]
+            }
+          }
+        },
+        {
+          "name": "GET User Predictions (read-only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/predictions/user/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["predictions", "user", "{{user_id}}"]
+            }
           }
         }
       ]

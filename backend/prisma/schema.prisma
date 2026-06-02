@@ -27,6 +27,11 @@ enum MatchStage {
   FINAL
 }
 
+enum MatchPhase {
+  GROUP_STAGE
+  KNOCKOUT
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -48,7 +53,9 @@ model Match {
   awayScore   Int?
   status      MatchStatus @default(SCHEDULED)
   stage       MatchStage
+  phase       MatchPhase
   groupName   String?
+  matchOrder  Int?
 
   predictions Prediction[]
 }
