@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+}
+
+enum MatchStage {
+  GROUP
+  R32
+  R16
+  QF
+  SF
+  FINAL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+
+  predictions Prediction[]
+}
+
+model Match {
+  id          String      @id @default(cuid())
+  externalId  Int?        @unique
+  homeTeam    String
+  awayTeam    String
+  scheduledAt DateTime
+  homeScore   Int?
+  awayScore   Int?
+  status      MatchStatus @default(SCHEDULED)
+  stage       MatchStage
+  groupName   String?
+
+  predictions Prediction[]
+}
+
+model Prediction {
+  id        String   @id @default(cuid())
+  userId    String
+  matchId   String
+  homeScore Int
+  awayScore Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@unique([userId, matchId])
+}
