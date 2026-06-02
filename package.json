@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "dev": "concurrently -n \"frontend,backend\" -c \"cyan,magenta\" \"pnpm dev:frontend\" \"pnpm dev:backend\"",
     "dev:frontend": "pnpm --filter frontend dev",
     "dev:backend": "pnpm --filter backend start:dev",
     "build:frontend": "pnpm --filter frontend build",
@@ -11,5 +12,8 @@
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
+  },
+  "dependencies": {
+    "concurrently": "^10.0.1"
   }
 }
