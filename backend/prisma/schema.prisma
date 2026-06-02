@@ -24,6 +24,7 @@ enum MatchStage {
   R16
   QF
   SF
+  THIRD_PLACE
   FINAL
 }
 

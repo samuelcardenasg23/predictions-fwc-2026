@@ -72,8 +72,9 @@ predictions-fwc-2026/
 ```
 User         — id, email, passwordHash, name, role (USER | ADMIN), createdAt
 Match        — id, externalId?, homeTeam, awayTeam, scheduledAt, homeScore?, awayScore?,
-               status (SCHEDULED | LIVE | FINISHED), stage (GROUP | R32 | R16 | QF | SF | FINAL),
-               groupName?, phase (GROUP_STAGE | KNOCKOUT)
+               status (SCHEDULED | LIVE | FINISHED),
+               stage (GROUP | R32 | R16 | QF | SF | THIRD_PLACE | FINAL),
+               phase (GROUP_STAGE | KNOCKOUT), groupName?, matchOrder?
 Prediction   — id, userId, matchId, homeScore, awayScore, createdAt, updatedAt
               — unique(userId, matchId)
 ```
@@ -85,9 +86,9 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 ## Sistema de dos fases
 
 ### Fase de grupos
-- Deadline: antes del partido inaugural (11 junio 2026)
-- 48 partidos con equipos reales hardcodeados en seed
-- Al cerrar el deadline, las predicciones se bloquean
+- Deadline: antes del partido inaugural (11 junio 2026, 19:00 UTC — México vs Sudáfrica)
+- 72 partidos en 12 grupos (A–L) de 4 equipos, con equipos y horarios reales del fixture oficial
+- Al cerrar el deadline, las predicciones se bloquean (match.scheduledAt <= now())
 
 ### Fase eliminatoria
 - Deadline: antes del primer partido de R32 (~2 julio 2026, cuando terminen los grupos)
@@ -113,9 +114,9 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 - `AdminGuard` para rutas de administración (role === ADMIN)
 
 ### 2. Matches
-- Seed hardcodeado: 48 partidos de fase de grupos con datos reales del Mundial 2026
-- Slots R32/R16/QF/SF/Final como TBD, se completan cuando el admin activa la fase knockout
-- `GET /api/matches` → lista de partidos con score actual, agrupados por fase/ronda
+- Seed: 72 partidos de fase de grupos (12 grupos A–L × 6 partidos) + 32 slots knockout (R32×16, R16×8, QF×4, SF×2, THIRD_PLACE×1, FINAL×1) = 104 total
+- Slots knockout como TBD, se completan cuando el admin activa la fase eliminatoria
+- `GET /api/matches?phase=&stage=` → lista de partidos, filtros opcionales
 - `PATCH /api/matches/:id` (admin) → actualizar equipos de un slot knockout
 - Job cada 60s cuando hay partidos LIVE → llama API-Football → actualiza scores en DB
   - Polling inteligente: si no hay partidos LIVE ese día, no se hacen calls (cuida el 100 req/día)
@@ -159,8 +160,8 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 6. ✅ CLAUDE.md con arquitectura y comandos
 
 ### Fase 2 — Core del negocio ✅ (completada 2026-06-02)
-7. ✅ Migración: `MatchPhase` enum (GROUP_STAGE | KNOCKOUT) + campo `phase` + `matchOrder` en Match
-8. ✅ Seed: 48 partidos de grupos (16 grupos A-P × 3 equipos, fechas aprox. Jun 11-30) + 31 slots knockout (R32×16, R16×8, QF×4, SF×2, Final×1). Equipos basados en clasificados conocidos — verificar antes de producción.
+7. ✅ Migración: `MatchPhase` enum (GROUP_STAGE | KNOCKOUT) + `THIRD_PLACE` en `MatchStage` + campos `phase` y `matchOrder` en Match
+8. ✅ Seed: 72 partidos de grupos (12 grupos A–L × 4 equipos × 6 partidos, horarios reales del fixture oficial Fox Sports/FIFA en UTC) + 32 slots knockout (R32×16, R16×8, QF×4, SF×2, THIRD_PLACE×1, FINAL×1) = 104 total
 9. ✅ Módulo Matches: `GET /api/matches?phase=&stage=`, `GET /api/matches/:id`, `PATCH /api/matches/:id` (admin)
 10. ✅ Módulo Predictions: `PUT /api/predictions/:matchId` (auto-save), `POST /api/predictions/bulk`, bloqueo automático si `match.scheduledAt <= now()`
 11. ✅ Vista predicciones ajena: `GET /api/predictions/user/:userId` (read-only)
