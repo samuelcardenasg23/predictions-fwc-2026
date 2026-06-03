@@ -232,6 +232,23 @@
           }
         }
       ]
+    },
+    {
+      "name": "Leaderboard",
+      "item": [
+        {
+          "name": "GET Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/leaderboard",
+              "host": ["{{base_url}}"],
+              "path": ["leaderboard"]
+            }
+          }
+        }
+      ]
     }
   ]
 }

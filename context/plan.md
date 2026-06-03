@@ -166,10 +166,10 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 10. ✅ Módulo Predictions: `PUT /api/predictions/:matchId` (auto-save), `POST /api/predictions/bulk`, bloqueo automático si `match.scheduledAt <= now()`
 11. ✅ Vista predicciones ajena: `GET /api/predictions/user/:userId` (read-only)
 
-### Fase 3 — Live & Leaderboard
-12. Integración API-Football (polling inteligente con @nestjs/schedule)
-13. Módulo Leaderboard con cálculo de puntos + multiplicadores por ronda
-14. Polling desde el frontend con TanStack Query (cada 30s en leaderboard)
+### Fase 3 — Live & Leaderboard ✅ (completada 2026-06-03)
+12. ✅ Integración API-Football — `FootballApiService` con native fetch, league=1 (WC), sin especificar season (limitación free tier). Polling inteligente: cron cada 2 min, solo llama API si hay partidos hoy en DB dentro de la ventana activa [-130min, +10min]. Un solo call `GET /fixtures?live=all&league=1` obtiene todos los partidos en vivo.
+13. ✅ Módulo Leaderboard con cálculo de puntos + multiplicadores por ronda: `GET /api/leaderboard` devuelve ranking ordenado con totalPoints, exactPredictions, outcomePredictions
+14. Polling desde el frontend con TanStack Query (cada 30s en leaderboard) — pendiente Fase 5 (UI)
 
 ### Fase 4 — Emails & Admin
 15. Integración Resend: email de activación fase knockout + reminder 24h
@@ -195,6 +195,6 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 ## Verificación por fase
 - **Fase 1** ✅: `pnpm dev` levanta ambas apps, login devuelve JWT, rutas protegidas rechazan sin token
 - **Fase 2** ✅: usuario puede ingresar 48 predicciones de grupos vía bulk o auto-save, verlas en `GET /predictions/me`, y ver las de otro usuario en `GET /predictions/user/:id`
-- **Fase 3**: con un partido LIVE, score se actualiza en DB en <2min y leaderboard refleja puntos con multiplicador correcto
+- **Fase 3** ✅: con un partido LIVE, score se actualiza en DB en <2min y leaderboard refleja puntos con multiplicador correcto
 - **Fase 4**: al activar fase knockout, todos los usuarios reciben el email de Resend con el link
 - **Fase 5**: deploy funcionando en Vercel + Railway con variables de entorno correctas
