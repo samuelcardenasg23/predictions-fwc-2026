@@ -14,6 +14,7 @@ interface Props {
   prediction?: Prediction;
   readOnly?: boolean;
   globalLocked?: boolean;
+  clearTrigger?: number;
   onSaved?: (matchId: string) => void;
 }
 
@@ -58,7 +59,7 @@ function ScoreInput({
   );
 }
 
-export function MatchCard({ match, prediction, readOnly = false, globalLocked = false, onSaved }: Props) {
+export function MatchCard({ match, prediction, readOnly = false, globalLocked = false, clearTrigger, onSaved }: Props) {
   const isLocked = readOnly || globalLocked;
   const [home, setHome] = useState(prediction?.homeScore?.toString() ?? '');
   const [away, setAway] = useState(prediction?.awayScore?.toString() ?? '');
@@ -69,6 +70,14 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
     setHome(prediction?.homeScore?.toString() ?? '');
     setAway(prediction?.awayScore?.toString() ?? '');
   }, [prediction?.homeScore, prediction?.awayScore]);
+
+  // Explicit clear trigger from parent (clear-all action)
+  useEffect(() => {
+    if (clearTrigger === undefined || clearTrigger === 0) return;
+    setHome('');
+    setAway('');
+    setStatus('idle');
+  }, [clearTrigger]);
 
   const debouncedHome = useDebounce(home, 1000);
   const debouncedAway = useDebounce(away, 1000);

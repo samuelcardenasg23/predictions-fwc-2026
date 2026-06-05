@@ -15,7 +15,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && typeof window !== 'undefined') {
+    // Don't redirect on 401 from the login endpoint itself — that's a wrong-password error
+    const isAuthEndpoint = err.config?.url?.includes('/auth/');
+    if (err.response?.status === 401 && !isAuthEndpoint && typeof window !== 'undefined') {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';

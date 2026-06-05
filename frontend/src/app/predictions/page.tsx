@@ -115,6 +115,7 @@ export default function PredictionsPage() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<'lock' | 'clear' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [clearTrigger, setClearTrigger] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
@@ -172,7 +173,7 @@ export default function PredictionsPage() {
     try {
       await api.delete('/predictions/me');
       setSavedIds(new Set());
-      // Set cache to empty immediately so MatchCards reset their inputs right away
+      setClearTrigger((t) => t + 1);
       queryClient.setQueryData(['predictions', 'me'], []);
       queryClient.invalidateQueries({ queryKey: ['predictions', 'me'] });
       setModal(null);
@@ -302,6 +303,7 @@ export default function PredictionsPage() {
                       match={match}
                       prediction={predMap.get(match.id)}
                       globalLocked={isGloballyLocked}
+                      clearTrigger={clearTrigger}
                       onSaved={(id) => setSavedIds((s) => new Set(s).add(id))}
                     />
                   ))}
