@@ -61,6 +61,12 @@ model Match {
   predictions Prediction[]
 }
 
+model SystemConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model Prediction {
   id        String   @id @default(cuid())
   userId    String

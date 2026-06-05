@@ -171,10 +171,11 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 13. ✅ Módulo Leaderboard con cálculo de puntos + multiplicadores por ronda: `GET /api/leaderboard` devuelve ranking ordenado con totalPoints, exactPredictions, outcomePredictions
 14. Polling desde el frontend con TanStack Query (cada 30s en leaderboard) — pendiente Fase 5 (UI)
 
-### Fase 4 — Emails & Admin
-15. Integración Resend: email de activación fase knockout + reminder 24h
-16. Endpoint admin para activar fase knockout y completar slots de equipos
-17. Job programado para reminder automático 24h antes del deadline
+### Fase 4 — Emails & Admin ✅ (completada 2026-06-04)
+15. ✅ Integración Resend: EmailService con batch sending (hasta 100 emails/call). Templates HTML para activación de knockout y reminder 24h. Env vars: RESEND_API_KEY, RESEND_FROM_EMAIL, FRONTEND_URL.
+16. ✅ POST /api/admin/activate-knockout (AdminGuard): valida que existan R32 slots, obtiene fecha del primer R32, envía email a todos los usuarios, guarda flag en SystemConfig.
+17. ✅ Cron diario 12:00 UTC: detecta si el primer R32 SCHEDULED está dentro de las próximas 25h → envía reminder una sola vez (flag knockout_reminder_sent en SystemConfig).
+18. ✅ Migración SystemConfig: tabla key-value para flags de sistema (knockout_activated, knockout_reminder_sent).
 
 ### Fase 5 — UI & Polish
 18. Landing page con copy y sección de premios
@@ -196,5 +197,5 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 - **Fase 1** ✅: `pnpm dev` levanta ambas apps, login devuelve JWT, rutas protegidas rechazan sin token
 - **Fase 2** ✅: usuario puede ingresar 48 predicciones de grupos vía bulk o auto-save, verlas en `GET /predictions/me`, y ver las de otro usuario en `GET /predictions/user/:id`
 - **Fase 3** ✅: con un partido LIVE, score se actualiza en DB en <2min y leaderboard refleja puntos con multiplicador correcto
-- **Fase 4**: al activar fase knockout, todos los usuarios reciben el email de Resend con el link
+- **Fase 4** ✅: al activar fase knockout, todos los usuarios reciben el email de Resend con el link
 - **Fase 5**: deploy funcionando en Vercel + Railway con variables de entorno correctas

@@ -234,6 +234,23 @@
       ]
     },
     {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "POST Activate Knockout Phase",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/admin/activate-knockout",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "activate-knockout"]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Leaderboard",
       "item": [
         {

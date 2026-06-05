@@ -8,6 +8,7 @@ import { MatchesModule } from './matches/matches.module.js';
 import { PredictionsModule } from './predictions/predictions.module.js';
 import { SyncModule } from './sync/sync.module.js';
 import { LeaderboardModule } from './leaderboard/leaderboard.module.js';
+import { AdminModule } from './admin/admin.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module.js';
     PredictionsModule,
     SyncModule,
     LeaderboardModule,
+    AdminModule,
   ],
 })
 export class AppModule {}
