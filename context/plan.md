@@ -177,12 +177,17 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 17. ✅ Cron diario 12:00 UTC: detecta si el primer R32 SCHEDULED está dentro de las próximas 25h → envía reminder una sola vez (flag knockout_reminder_sent en SystemConfig).
 18. ✅ Migración SystemConfig: tabla key-value para flags de sistema (knockout_activated, knockout_reminder_sent).
 
-### Fase 5 — UI & Polish
-18. Landing page con copy y sección de premios
-19. Páginas de predicciones (grupos + knockout), auto-save, barra de progreso
-20. Leaderboard UI en tiempo real
-21. Mejoras de UX: loading states, toasts, mobile responsive
-22. Deploy a Vercel + Railway
+### Fase 5 — UI & Polish ✅ (completada 2026-06-04)
+18. ✅ Landing page: hero, "¿Cómo funciona?", tabla de puntos, CTAs
+19. ✅ Login + Register con validación y toast de error/éxito
+20. ✅ Página de predicciones grupos: 72 partidos agrupados por grupo, autosave con debounce 1s, barra de progreso, skeleton loaders, partidos pasados bloqueados con candado
+21. ✅ Página knockout: muestra partidos por ronda, estado vacío si todos son TBD
+22. ✅ Vista predicciones ajena (/predictions/[userId]): read-only
+23. ✅ Leaderboard: tabla con polling 30s (TanStack Query refetchInterval), medallas 🥇🥈🥉, link a predicciones de cada jugador, badge "Tú" propio
+24. ✅ Nav sticky con auth state (muestra nombre + botón salir si autenticado)
+25. ✅ AuthContext (localStorage), QueryProvider (TanStack Query), Toaster (sonner)
+26. ✅ Interceptor axios: agrega Bearer token y redirige a /login en 401
+27. Deploy a Vercel + Railway — pendiente
 
 ---
 
