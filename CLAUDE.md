@@ -54,7 +54,7 @@ pnpm --filter frontend lint
 Schema at `backend/prisma/schema.prisma`. Three models:
 
 - **`User`** — `role: USER | ADMIN`
-- **`Match`** — `status: SCHEDULED | LIVE | FINISHED`, `stage: GROUP | R32 | R16 | QF | SF | FINAL`, optional `externalId` (API-Football ID)
+- **`Match`** — `status: SCHEDULED | LIVE | FINISHED`, `stage: GROUP | R32 | R16 | QF | SF | THIRD_PLACE | FINAL`, optional `externalId` (football-data.org match ID)
 - **`Prediction`** — `unique(userId, matchId)`, stores predicted `homeScore` + `awayScore`
 
 Scoring: 3 pts exact result, 1 pt correct outcome (win/draw/loss), 0 pts otherwise.
@@ -74,7 +74,7 @@ Scoring: 3 pts exact result, 1 pt correct outcome (win/draw/loss), 0 pts otherwi
 DATABASE_URL=postgresql://...
 JWT_SECRET=...
 JWT_EXPIRATION=7d
-API_FOOTBALL_KEY=...
+FOOTBALL_DATA_KEY=...       # football-data.org free tier token
 PORT=3001
 FRONTEND_URL=http://localhost:3000
 ```

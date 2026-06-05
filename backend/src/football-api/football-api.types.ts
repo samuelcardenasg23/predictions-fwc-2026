@@ -1,42 +1,30 @@
-export interface ApiFixtureStatus {
-  long: string;
-  short: string;
-  elapsed: number | null;
-  extra: number | null;
+export interface FDTeam {
+  id: number | null;
+  name: string | null;
+  shortName: string | null;
+  tla: string | null;
+  crest: string | null;
 }
 
-export interface ApiFixture {
-  fixture: {
-    id: number;
-    date: string;
-    timestamp: number;
-    status: ApiFixtureStatus;
-  };
-  league: {
-    id: number;
-    name: string;
-    season: number;
-  };
-  teams: {
-    home: { id: number; name: string };
-    away: { id: number; name: string };
-  };
-  goals: {
-    home: number | null;
-    away: number | null;
-  };
+export interface FDMatch {
+  id: number;
+  utcDate: string;
+  status: string;
+  stage: string;
+  group: string | null;
+  homeTeam: FDTeam;
+  awayTeam: FDTeam;
   score: {
-    fulltime: { home: number | null; away: number | null };
-    extratime: { home: number | null; away: number | null };
-    penalty: { home: number | null; away: number | null };
+    winner: string | null;
+    fullTime: { home: number | null; away: number | null };
+    halfTime: { home: number | null; away: number | null };
   };
 }
 
-export interface ApiResponse<T> {
-  results: number;
-  response: T[];
-  errors: Record<string, string> | [];
+export interface FDResponse {
+  matches: FDMatch[];
 }
 
-export const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT', 'SUSP']);
-export const FINISHED_STATUSES = new Set(['FT', 'AET', 'PEN']);
+// football-data.org status values
+export const LIVE_STATUSES = new Set(['IN_PLAY', 'PAUSED']);
+export const FINISHED_STATUSES = new Set(['FINISHED']);
