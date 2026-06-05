@@ -7,10 +7,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { AuthResponse } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Trophy, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -36,34 +33,80 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Ingresar</CardTitle>
-          <CardDescription>Accede a tu quiniela del Mundial 2026</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
+      {/* Background glow */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="h-96 w-96 rounded-full bg-green-500/5 blur-3xl" />
+      </div>
+
+      <div className="relative w-full max-w-sm">
+        {/* Card */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-8 backdrop-blur-sm shadow-2xl">
+          {/* Logo */}
+          <div className="mb-8 flex flex-col items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-500/10 border border-green-500/20">
+              <Trophy className="h-6 w-6 text-green-400" />
+            </div>
+            <div className="text-center">
+              <h1 className="text-xl font-bold text-slate-100">Bienvenido de vuelta</h1>
+              <p className="text-sm text-slate-500 mt-0.5">Accede a tu quiniela del Mundial 2026</p>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required autoComplete="email" />
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                className="w-full rounded-lg border border-slate-700/80 bg-slate-800/60 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-green-500/50 focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
+                placeholder="tu@email.com"
+              />
             </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" name="password" type="password" required autoComplete="current-password" />
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Contraseña
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                className="w-full rounded-lg border border-slate-700/80 bg-slate-800/60 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-green-500/50 focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
+                placeholder="••••••••"
+              />
             </div>
-            <Button type="submit" disabled={loading} className="mt-1">
-              {loading ? 'Ingresando...' : 'Ingresar'}
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              ¿No tienes cuenta?{' '}
-              <Link href="/register" className="font-medium underline underline-offset-4">
-                Regístrate
-              </Link>
-            </p>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 py-3 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Ingresando...
+                </>
+              ) : (
+                'Ingresar'
+              )}
+            </button>
           </form>
-        </CardContent>
-      </Card>
+
+          <p className="mt-6 text-center text-sm text-slate-600">
+            ¿No tienes cuenta?{' '}
+            <Link href="/register" className="font-semibold text-green-400 hover:text-green-300 transition-colors">
+              Regístrate gratis
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

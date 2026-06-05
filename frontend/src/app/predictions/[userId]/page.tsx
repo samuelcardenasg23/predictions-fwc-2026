@@ -7,7 +7,20 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { Prediction } from '@/lib/types';
 import { MatchCard } from '@/components/match-card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Eye } from 'lucide-react';
+
+function SkeletonCard() {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-slate-800/60 bg-slate-900/30 px-4 py-3">
+      <div className="h-8 w-16 rounded-lg bg-slate-800 animate-pulse" />
+      <div className="flex flex-1 items-center gap-3">
+        <div className="h-4 flex-1 rounded bg-slate-800 animate-pulse" />
+        <div className="h-9 w-24 rounded-lg bg-slate-800 animate-pulse" />
+        <div className="h-4 flex-1 rounded bg-slate-800 animate-pulse" />
+      </div>
+    </div>
+  );
+}
 
 export default function UserPredictionsPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params);
@@ -37,34 +50,51 @@ export default function UserPredictionsPage({ params }: { params: Promise<{ user
 
   if (authLoading || !user) return null;
 
-  const ownerName = predictions?.find((p) => p.userId !== user.id)
-    ? 'este jugador'
-    : 'tus pronósticos';
+  const isOwnProfile = userId === user.id;
+  const ownerName = predictions?.[0]?.match ? 'este jugador' : 'este jugador';
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Pronósticos de {ownerName}</h1>
-        <p className="text-sm text-muted-foreground">Vista de solo lectura</p>
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+            {isOwnProfile ? 'Tu historial' : 'Vista de solo lectura'}
+          </p>
+          <div className="flex items-center gap-1 rounded-full border border-slate-800 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-600">
+            <Eye className="h-2.5 w-2.5" />
+            Solo lectura
+          </div>
+        </div>
+        <h1 className="text-2xl font-black text-slate-100">
+          Pronósticos de {isOwnProfile ? 'mis picks' : ownerName}
+        </h1>
       </div>
 
       {isLoading ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 12 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            <SkeletonCard key={i} />
           ))}
         </div>
       ) : predictions?.length === 0 ? (
-        <p className="py-12 text-center text-muted-foreground">
-          Este usuario aún no ha registrado pronósticos.
-        </p>
+        <div className="flex flex-col items-center gap-3 py-24 text-center">
+          <p className="text-slate-400 font-medium">Sin pronósticos registrados</p>
+          <p className="text-sm text-slate-600">Este usuario aún no ha guardado ningún pronóstico.</p>
+        </div>
       ) : (
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-10">
           {byGroup.map(([group, preds]) => (
             <section key={group}>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Grupo {group}
-              </h2>
+              <div className="mb-3 flex items-center gap-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-500/10 border border-green-500/20">
+                  <span className="text-xs font-black text-green-400">{group}</span>
+                </div>
+                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                  Grupo {group}
+                </h2>
+                <div className="flex-1 h-px bg-slate-800/60" />
+              </div>
               <div className="flex flex-col gap-2">
                 {preds.map((pred) =>
                   pred.match ? (
