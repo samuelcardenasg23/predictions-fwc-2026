@@ -1,3 +1,10 @@
+// Países que necesitan códigos de subdivisión ISO 3166-2 (no soportados por flagfeed)
+// flagcdn sí los soporta: https://flagcdn.com/w80/{code}.png
+const FLAGCDN_OVERRIDES: Record<string, string> = {
+  'Escocia': 'gb-sct',
+  'Inglaterra': 'gb-eng',
+};
+
 // ISO 3166-1 alpha-2 codes para los 48 países del Mundial 2026
 // URL: https://flagfeed.com/country/{iso2}
 const ISO2: Record<string, string> = {
@@ -75,6 +82,9 @@ const ISO2: Record<string, string> = {
 };
 
 export function getFlagUrl(country: string): string | null {
+  const subdivision = FLAGCDN_OVERRIDES[country];
+  if (subdivision) return `https://flagcdn.com/w80/${subdivision}.png`;
+
   const code = ISO2[country];
   if (!code) return null;
   return `https://flagfeed.com/country/${code}`;

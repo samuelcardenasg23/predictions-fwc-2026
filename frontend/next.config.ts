@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: 'flagfeed.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'flagcdn.com',
+        pathname: '/**',
+      },
     ],
   },
 };
