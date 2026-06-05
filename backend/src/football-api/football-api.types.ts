@@ -35,6 +35,7 @@ export interface ApiFixture {
 export interface ApiResponse<T> {
   results: number;
   response: T[];
+  errors: Record<string, string> | [];
 }
 
 export const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE', 'INT', 'SUSP']);
