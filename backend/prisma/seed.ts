@@ -1,4 +1,5 @@
-import { PrismaClient, MatchStage, MatchPhase, MatchStatus } from '@prisma/client';
+import { PrismaClient, MatchStage, MatchPhase, MatchStatus, Role } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -171,7 +172,22 @@ const knockoutSlots = [
 
 // ─── main ─────────────────────────────────────────────────────────────────────
 
+async function seedAdmin() {
+  const email = 'admin@fwc2026.com';
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    console.log('Admin user already exists, skipping.');
+    return;
+  }
+  const passwordHash = await bcrypt.hash('Admin2026!', 10);
+  await prisma.user.create({
+    data: { email, name: 'Admin', passwordHash, role: Role.ADMIN },
+  });
+  console.log(`Admin created → email: ${email}  password: Admin2026!`);
+}
+
 async function main() {
+  await seedAdmin();
   console.log('Seeding matches...');
 
   await prisma.prediction.deleteMany();
