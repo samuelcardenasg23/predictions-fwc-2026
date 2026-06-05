@@ -22,13 +22,18 @@ export function Flag({ country, size = 40, className = '' }: FlagProps) {
   }
 
   return (
-    <Image
-      src={src}
-      alt={`Bandera de ${country}`}
-      width={size}
-      height={Math.round(size * 0.67)}
-      className={`shrink-0 rounded object-cover shadow-sm ${className}`}
-      unoptimized
-    />
+    <div
+      className={`shrink-0 overflow-hidden rounded-full shadow-sm ${className}`}
+      style={{ width: size, height: size }}
+    >
+      <Image
+        src={src}
+        alt={`Bandera de ${country}`}
+        width={size}
+        height={size}
+        className="h-full w-full object-cover"
+        unoptimized
+      />
+    </div>
   );
 }
