@@ -1,129 +1,77 @@
-// ISO 3166-1 alpha-2 codes — used with flagfeed.com
+// ISO 3166-1 alpha-2 codes para los 48 países del Mundial 2026
 // URL: https://flagfeed.com/country/{iso2}
 const ISO2: Record<string, string> = {
-  // Americas
-  'United States': 'us',
-  'USA': 'us',
-  'Mexico': 'mx',
-  'Canada': 'ca',
-  'Brazil': 'br',
-  'Argentina': 'ar',
-  'Colombia': 'co',
-  'Uruguay': 'uy',
-  'Ecuador': 'ec',
-  'Venezuela': 've',
-  'Peru': 'pe',
-  'Chile': 'cl',
-  'Bolivia': 'bo',
-  'Paraguay': 'py',
-  'Jamaica': 'jm',
-  'Costa Rica': 'cr',
-  'Honduras': 'hn',
-  'Panama': 'pa',
-  'Guatemala': 'gt',
-  'El Salvador': 'sv',
-  'Haiti': 'ht',
-  'Trinidad and Tobago': 'tt',
-  'Trinidad & Tobago': 'tt',
-  'Cuba': 'cu',
+  // Grupo A
+  'México': 'mx',
+  'Sudáfrica': 'za',
+  'Corea del Sur': 'kr',
+  'Chequia': 'cz',
 
-  // Europe
-  'Germany': 'de',
-  'France': 'fr',
-  'Spain': 'es',
-  'England': 'gb',
-  'Portugal': 'pt',
-  'Netherlands': 'nl',
-  'Italy': 'it',
-  'Belgium': 'be',
-  'Croatia': 'hr',
-  'Denmark': 'dk',
-  'Switzerland': 'ch',
-  'Poland': 'pl',
-  'Austria': 'at',
-  'Serbia': 'rs',
-  'Turkey': 'tr',
-  'Ukraine': 'ua',
-  'Scotland': 'gb',
-  'Wales': 'gb',
-  'Hungary': 'hu',
-  'Romania': 'ro',
-  'Czech Republic': 'cz',
-  'Slovakia': 'sk',
-  'Slovenia': 'si',
-  'Albania': 'al',
-  'Georgia': 'ge',
-  'Norway': 'no',
-  'Sweden': 'se',
-  'Finland': 'fi',
-  'Greece': 'gr',
-  'Iceland': 'is',
-  'Ireland': 'ie',
-
-  // Africa
-  'Morocco': 'ma',
-  'Senegal': 'sn',
-  'Nigeria': 'ng',
-  'Ivory Coast': 'ci',
-  "Côte d'Ivoire": 'ci',
-  'Cameroon': 'cm',
-  'Ghana': 'gh',
-  'Mali': 'ml',
-  'Egypt': 'eg',
-  'Tunisia': 'tn',
-  'Algeria': 'dz',
-  'South Africa': 'za',
-  'Congo DR': 'cd',
-  'DR Congo': 'cd',
-  'Tanzania': 'tz',
-  'Zambia': 'zm',
-  'Zimbabwe': 'zw',
-  'Uganda': 'ug',
-  'Guinea': 'gn',
-  'Gabon': 'ga',
-  'Comoros': 'km',
-  'Cape Verde': 'cv',
-  'Mozambique': 'mz',
-  'Angola': 'ao',
-  'Kenya': 'ke',
-  'Benin': 'bj',
-  'Namibia': 'na',
-  'Sudan': 'sd',
-  'South Sudan': 'ss',
-  'Libya': 'ly',
-  'Rwanda': 'rw',
-  'Ethiopia': 'et',
-
-  // Asia
-  'Japan': 'jp',
-  'South Korea': 'kr',
-  'Korea Republic': 'kr',
-  'Australia': 'au',
-  'Saudi Arabia': 'sa',
-  'Iran': 'ir',
+  // Grupo B
+  'Canadá': 'ca',
+  'Bosnia y Herzegovina': 'ba',
   'Qatar': 'qa',
-  'China': 'cn',
-  'Uzbekistan': 'uz',
-  'Iraq': 'iq',
-  'Jordan': 'jo',
-  'UAE': 'ae',
-  'United Arab Emirates': 'ae',
-  'Bahrain': 'bh',
-  'Oman': 'om',
-  'Indonesia': 'id',
-  'Thailand': 'th',
-  'Vietnam': 'vn',
-  'Philippines': 'ph',
-  'Kyrgyzstan': 'kg',
-  'Tajikistan': 'tj',
+  'Suiza': 'ch',
 
-  // Oceania
-  'New Zealand': 'nz',
-  'Fiji': 'fj',
-  'Papua New Guinea': 'pg',
-  'Vanuatu': 'vu',
+  // Grupo C
+  'Brasil': 'br',
+  'Marruecos': 'ma',
+  'Haití': 'ht',
+  'Escocia': 'gb',
 
-  // Special
+  // Grupo D
+  'Estados Unidos': 'us',
+  'Paraguay': 'py',
+  'Australia': 'au',
+  'Turquía': 'tr',
+
+  // Grupo E
+  'Alemania': 'de',
+  'Curazao': 'cw',
+  'Costa de Marfil': 'ci',
+  'Ecuador': 'ec',
+
+  // Grupo F
+  'Países Bajos': 'nl',
+  'Japón': 'jp',
+  'Túnez': 'tn',
+  'Suecia': 'se',
+
+  // Grupo G
+  'Bélgica': 'be',
+  'Egipto': 'eg',
+  'Irán': 'ir',
+  'Nueva Zelanda': 'nz',
+
+  // Grupo H
+  'España': 'es',
+  'Cabo Verde': 'cv',
+  'Arabia Saudita': 'sa',
+  'Uruguay': 'uy',
+
+  // Grupo I
+  'Francia': 'fr',
+  'Senegal': 'sn',
+  'Irak': 'iq',
+  'Noruega': 'no',
+
+  // Grupo J
+  'Argentina': 'ar',
+  'Argelia': 'dz',
+  'Austria': 'at',
+  'Jordania': 'jo',
+
+  // Grupo K
+  'Portugal': 'pt',
+  'Colombia': 'co',
+  'Ghana': 'gh',
+  'Uzbekistán': 'uz',
+
+  // Grupo L
+  'Inglaterra': 'gb',
+  'Panamá': 'pa',
+  'Congo RD': 'cd',
+  'Croacia': 'hr',
 };
 
 export function getFlagUrl(country: string): string | null {

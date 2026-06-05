@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { Trophy, Zap, Users, BarChart3, Star, Clock, Shield } from 'lucide-react';
+import { LandingCTA, LandingBottomCTA } from '@/components/landing-cta';
 
 const POINTS_ROWS = [
   { round: 'Fase de grupos', exact: 3, outcome: 1 },
@@ -43,7 +43,6 @@ export default function LandingPage() {
     <div className="flex flex-col">
       {/* Hero */}
       <section className="relative flex flex-col items-center justify-center px-4 py-28 text-center overflow-hidden">
-        {/* Background decoration */}
         <div className="absolute inset-0 -z-10">
           <div className="absolute top-20 left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-green-500/5 blur-3xl" />
           <div className="absolute top-40 left-1/4 h-[300px] w-[300px] rounded-full bg-amber-500/5 blur-3xl" />
@@ -85,21 +84,8 @@ export default function LandingPage() {
           ))}
         </div>
 
-        {/* CTAs */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center gap-3">
-          <Link
-            href="/register"
-            className="rounded-xl bg-green-500 px-8 py-3 text-base font-bold text-slate-950 hover:bg-green-400 transition-all duration-200 shadow-lg shadow-green-500/25 hover:shadow-green-500/40"
-          >
-            Únete ahora — es gratis
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-xl border border-slate-700 bg-slate-900/60 px-8 py-3 text-base font-medium text-slate-300 hover:border-slate-600 hover:text-slate-100 transition-colors"
-          >
-            Ya tengo cuenta
-          </Link>
-        </div>
+        {/* CTAs — client component para detectar si ya está logueado */}
+        <LandingCTA />
       </section>
 
       {/* How it works */}
@@ -158,9 +144,7 @@ export default function LandingPage() {
                   <tr
                     key={row.round}
                     className={`border-b border-slate-800/50 transition-colors hover:bg-slate-800/30 ${
-                      i === POINTS_ROWS.length - 1
-                        ? 'border-b-0 bg-amber-500/5'
-                        : ''
+                      i === POINTS_ROWS.length - 1 ? 'border-b-0 bg-amber-500/5' : ''
                     }`}
                   >
                     <td className="px-5 py-3.5 font-medium text-slate-300">
@@ -198,12 +182,7 @@ export default function LandingPage() {
             <p className="text-slate-500 mb-6 text-sm">
               El torneo arranca el 11 de junio. No esperes más.
             </p>
-            <Link
-              href="/register"
-              className="inline-flex rounded-xl bg-green-500 px-8 py-3 text-base font-bold text-slate-950 hover:bg-green-400 transition-all shadow-lg shadow-green-500/20"
-            >
-              Crear mi cuenta gratis
-            </Link>
+            <LandingBottomCTA />
           </div>
         </div>
       </section>

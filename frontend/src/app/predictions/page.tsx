@@ -172,6 +172,8 @@ export default function PredictionsPage() {
     try {
       await api.delete('/predictions/me');
       setSavedIds(new Set());
+      // Set cache to empty immediately so MatchCards reset their inputs right away
+      queryClient.setQueryData(['predictions', 'me'], []);
       queryClient.invalidateQueries({ queryKey: ['predictions', 'me'] });
       setModal(null);
       toast.success('Predicciones eliminadas. Puedes volver a empezar.');
