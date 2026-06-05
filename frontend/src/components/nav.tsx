@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Trophy, LayoutGrid, BarChart3, LogOut, User } from 'lucide-react';
+import { Trophy, LayoutGrid, BarChart3, LogOut, User, Grid3X3 } from 'lucide-react';
 
 export function Nav() {
   const { user, logout } = useAuth();
@@ -38,6 +38,9 @@ export function Nav() {
             </NavLink>
             <NavLink href="/leaderboard" active={isActive('/leaderboard')} icon={<BarChart3 className="h-3.5 w-3.5" />}>
               Tabla
+            </NavLink>
+            <NavLink href="/standings" active={isActive('/standings')} icon={<Grid3X3 className="h-3.5 w-3.5" />}>
+              Grupos
             </NavLink>
 
             <div className="ml-2 flex items-center gap-2 border-l border-slate-800 pl-3">

@@ -10,6 +10,7 @@ import { PredictionsModule } from './predictions/predictions.module.js';
 import { SyncModule } from './sync/sync.module.js';
 import { LeaderboardModule } from './leaderboard/leaderboard.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { StandingsModule } from './standings/standings.module.js';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AdminModule } from './admin/admin.module.js';
     SyncModule,
     LeaderboardModule,
     AdminModule,
+    StandingsModule,
   ],
 })
 export class AppModule implements NestModule {
