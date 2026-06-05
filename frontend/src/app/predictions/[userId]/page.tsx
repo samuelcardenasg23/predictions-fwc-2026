@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import { use } from 'react';
+import { use, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
@@ -15,19 +14,16 @@ export default function UserPredictionsPage({ params }: { params: Promise<{ user
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  if (!authLoading && !user) {
-    router.push('/login');
-    return null;
-  }
+  useEffect(() => {
+    if (!authLoading && !user) router.push('/login');
+  }, [authLoading, user, router]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: predictions, isLoading } = useQuery<Prediction[]>({
     queryKey: ['predictions', 'user', userId],
     queryFn: () => api.get(`/predictions/user/${userId}`).then((r) => r.data),
     enabled: !!user,
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const byGroup = useMemo(() => {
     const groups = new Map<string, Prediction[]>();
     predictions?.forEach((p) => {
@@ -39,7 +35,11 @@ export default function UserPredictionsPage({ params }: { params: Promise<{ user
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [predictions]);
 
-  const ownerName = predictions?.[0] ? 'Usuario' : 'Usuario';
+  if (authLoading || !user) return null;
+
+  const ownerName = predictions?.find((p) => p.userId !== user.id)
+    ? 'este jugador'
+    : 'tus pronósticos';
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -68,12 +68,7 @@ export default function UserPredictionsPage({ params }: { params: Promise<{ user
               <div className="flex flex-col gap-2">
                 {preds.map((pred) =>
                   pred.match ? (
-                    <MatchCard
-                      key={pred.id}
-                      match={pred.match}
-                      prediction={pred}
-                      readOnly
-                    />
+                    <MatchCard key={pred.id} match={pred.match} prediction={pred} readOnly />
                   ) : null,
                 )}
               </div>

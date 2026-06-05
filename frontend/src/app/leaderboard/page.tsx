@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -16,18 +17,18 @@ export default function LeaderboardPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  if (!authLoading && !user) {
-    router.push('/login');
-    return null;
-  }
+  useEffect(() => {
+    if (!authLoading && !user) router.push('/login');
+  }, [authLoading, user, router]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data, isLoading, dataUpdatedAt } = useQuery<LeaderboardEntry[]>({
     queryKey: ['leaderboard'],
     queryFn: () => api.get('/leaderboard').then((r) => r.data),
     enabled: !!user,
     refetchInterval: 30_000,
   });
+
+  if (authLoading || !user) return null;
 
   const updatedAt = dataUpdatedAt
     ? new Date(dataUpdatedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
@@ -82,10 +83,7 @@ export default function LeaderboardPage() {
                     {MEDAL[entry.rank] ?? <span className="text-muted-foreground">{entry.rank}</span>}
                   </td>
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/predictions/${entry.userId}`}
-                      className="hover:underline"
-                    >
+                    <Link href={`/predictions/${entry.userId}`} className="hover:underline">
                       {entry.name}
                     </Link>
                     {entry.userId === user?.id && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
@@ -15,33 +15,28 @@ export default function PredictionsPage() {
   const router = useRouter();
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
-  if (!authLoading && !user) {
-    router.push('/login');
-    return null;
-  }
+  useEffect(() => {
+    if (!authLoading && !user) router.push('/login');
+  }, [authLoading, user, router]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: matches, isLoading: matchesLoading } = useQuery<Match[]>({
     queryKey: ['matches', 'GROUP_STAGE'],
     queryFn: () => api.get('/matches?phase=GROUP_STAGE').then((r) => r.data),
     enabled: !!user,
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: predictions, isLoading: predsLoading } = useQuery<Prediction[]>({
     queryKey: ['predictions', 'me'],
     queryFn: () => api.get('/predictions/me').then((r) => r.data),
     enabled: !!user,
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const predMap = useMemo(() => {
     const map = new Map<string, Prediction>();
     predictions?.forEach((p) => map.set(p.matchId, p));
     return map;
   }, [predictions]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const byGroup = useMemo(() => {
     const groups = new Map<string, Match[]>();
     matches?.forEach((m) => {
@@ -52,11 +47,12 @@ export default function PredictionsPage() {
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [matches]);
 
+  if (authLoading || !user) return null;
+
   const totalMatches = matches?.length ?? 72;
   const savedCount = (predictions?.length ?? 0) + savedIds.size;
   const progress = Math.min(100, Math.round((savedCount / totalMatches) * 100));
-
-  const isLoading = authLoading || matchesLoading || predsLoading;
+  const isLoading = matchesLoading || predsLoading;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">

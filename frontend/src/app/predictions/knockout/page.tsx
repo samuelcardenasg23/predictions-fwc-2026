@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
@@ -24,33 +24,28 @@ export default function KnockoutPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
-  if (!authLoading && !user) {
-    router.push('/login');
-    return null;
-  }
+  useEffect(() => {
+    if (!authLoading && !user) router.push('/login');
+  }, [authLoading, user, router]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: matches, isLoading: matchesLoading } = useQuery<Match[]>({
     queryKey: ['matches', 'KNOCKOUT'],
     queryFn: () => api.get('/matches?phase=KNOCKOUT').then((r) => r.data),
     enabled: !!user,
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: predictions, isLoading: predsLoading } = useQuery<Prediction[]>({
     queryKey: ['predictions', 'me'],
     queryFn: () => api.get('/predictions/me').then((r) => r.data),
     enabled: !!user,
   });
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const predMap = useMemo(() => {
     const map = new Map<string, Prediction>();
     predictions?.forEach((p) => map.set(p.matchId, p));
     return map;
   }, [predictions]);
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const byStage = useMemo(() => {
     const stages = new Map<string, Match[]>();
     matches?.forEach((m) => {
@@ -60,8 +55,10 @@ export default function KnockoutPage() {
     return STAGE_ORDER.filter((s) => stages.has(s)).map((s) => [s, stages.get(s)!] as const);
   }, [matches]);
 
+  if (authLoading || !user) return null;
+
   const allTbd = matches?.every((m) => m.homeTeam === 'TBD' && m.awayTeam === 'TBD');
-  const isLoading = authLoading || matchesLoading || predsLoading;
+  const isLoading = matchesLoading || predsLoading;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
