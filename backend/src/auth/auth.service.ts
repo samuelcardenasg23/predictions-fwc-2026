@@ -37,7 +37,13 @@ export class AuthService {
     const token = this.jwt.sign({ sub: user.id, email: user.email });
     return {
       access_token: token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        groupStageLockedAt: user.groupStageLockedAt ?? null,
+      },
     };
   }
 }

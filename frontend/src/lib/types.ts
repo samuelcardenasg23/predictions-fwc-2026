@@ -8,6 +8,7 @@ export interface User {
   email: string;
   name: string;
   role: Role;
+  groupStageLockedAt: string | null;
 }
 
 export interface Match {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { PredictionsService } from './predictions.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { UpsertPredictionDto } from './dto/upsert-prediction.dto.js';
@@ -17,6 +17,16 @@ export class PredictionsController {
   @Post('bulk')
   bulkUpsert(@Req() req: AuthenticatedRequest, @Body() dto: BulkPredictionsDto) {
     return this.predictionsService.bulkUpsert(req.user.id, dto);
+  }
+
+  @Post('lock-group-stage')
+  lockGroupStage(@Req() req: AuthenticatedRequest) {
+    return this.predictionsService.lockGroupStage(req.user.id);
+  }
+
+  @Delete('me')
+  deleteAll(@Req() req: AuthenticatedRequest) {
+    return this.predictionsService.deleteAll(req.user.id);
   }
 
   @Put(':matchId')

@@ -18,12 +18,18 @@ export class LeaderboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
+    // Include ALL predictions — we'll compute points only for played matches
+    // so every user with at least one prediction appears in the table from day 1
     const predictions = await this.prisma.prediction.findMany({
-      where: {
-        match: { status: { in: [MatchStatus.LIVE, MatchStatus.FINISHED] } },
-      },
       include: {
-        match: { select: { homeScore: true, awayScore: true, stage: true, status: true } },
+        match: {
+          select: {
+            homeScore: true,
+            awayScore: true,
+            stage: true,
+            status: true,
+          },
+        },
         user: { select: { id: true, name: true } },
       },
     });
@@ -35,35 +41,48 @@ export class LeaderboardService {
 
     for (const pred of predictions) {
       const { match, user } = pred;
-      if (match.homeScore === null || match.awayScore === null) continue;
+
+      if (!statsMap.has(user.id)) {
+        statsMap.set(user.id, {
+          name: user.name,
+          totalPoints: 0,
+          exact: 0,
+          outcome: 0,
+          total: 0,
+        });
+      }
+
+      const entry = statsMap.get(user.id)!;
+      entry.total += 1;
+
+      // Only score predictions for matches that have been played
+      const isPlayed =
+        (match.status === MatchStatus.LIVE || match.status === MatchStatus.FINISHED) &&
+        match.homeScore !== null &&
+        match.awayScore !== null;
+
+      if (!isPlayed) continue;
 
       const pts = calculatePoints(
         { homeScore: pred.homeScore, awayScore: pred.awayScore },
-        { homeScore: match.homeScore, awayScore: match.awayScore, stage: match.stage },
+        { homeScore: match.homeScore!, awayScore: match.awayScore!, stage: match.stage },
       );
-
-      const entry = statsMap.get(user.id) ?? {
-        name: user.name,
-        totalPoints: 0,
-        exact: 0,
-        outcome: 0,
-        total: 0,
-      };
 
       const isExact =
         pred.homeScore === match.homeScore && pred.awayScore === match.awayScore;
-      const isOutcome = !isExact && pts > 0;
 
       entry.totalPoints += pts;
-      entry.total += 1;
       if (isExact) entry.exact += 1;
-      if (isOutcome) entry.outcome += 1;
-
-      statsMap.set(user.id, entry);
+      else if (pts > 0) entry.outcome += 1;
     }
 
+    // Sort by totalPoints desc, then by total predictions desc (more active players rank higher on tie)
     const sorted = [...statsMap.entries()]
-      .sort((a, b) => b[1].totalPoints - a[1].totalPoints)
+      .sort((a, b) =>
+        b[1].totalPoints !== a[1].totalPoints
+          ? b[1].totalPoints - a[1].totalPoints
+          : b[1].total - a[1].total,
+      )
       .map(([userId, s], index) => ({
         rank: index + 1,
         userId,

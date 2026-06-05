@@ -6,13 +6,14 @@ import { toast } from 'sonner';
 import api from '@/lib/api';
 import { Match, Prediction } from '@/lib/types';
 import { useDebounce } from '@/hooks/use-debounce';
-import { getFlag } from '@/lib/flags';
+import { Flag } from '@/components/flag';
 import { cn } from '@/lib/utils';
 
 interface Props {
   match: Match;
   prediction?: Prediction;
   readOnly?: boolean;
+  globalLocked?: boolean;
   onSaved?: (matchId: string) => void;
 }
 
@@ -57,9 +58,9 @@ function ScoreInput({
   );
 }
 
-export function MatchCard({ match, prediction, readOnly = false, onSaved }: Props) {
-  const isPast = new Date(match.scheduledAt) <= new Date();
-  const isLocked = readOnly || isPast;
+export function MatchCard({ match, prediction, readOnly = false, globalLocked = false, onSaved }: Props) {
+  const matchStarted = new Date(match.scheduledAt) <= new Date();
+  const isLocked = readOnly || globalLocked || matchStarted;
   const [home, setHome] = useState(prediction?.homeScore?.toString() ?? '');
   const [away, setAway] = useState(prediction?.awayScore?.toString() ?? '');
   const [status, setStatus] = useState<SaveStatus>('idle');
@@ -105,7 +106,7 @@ export function MatchCard({ match, prediction, readOnly = false, onSaved }: Prop
           : isFinished
             ? 'border-slate-800/60 bg-slate-900/40'
             : 'border-slate-800/60 bg-slate-900/30 hover:border-slate-700/60',
-        isLocked && !isLive && !isFinished && 'opacity-60',
+        isLocked && !isLive && !isFinished && 'opacity-70',
       )}
     >
       {/* Live indicator */}
@@ -117,19 +118,22 @@ export function MatchCard({ match, prediction, readOnly = false, onSaved }: Prop
       )}
 
       {/* Date/Time */}
-      <div className={cn('w-16 shrink-0 text-center', isLive ? 'mt-3' : '')}>
-        <p className="text-[10px] font-medium text-slate-500 uppercase">{date}</p>
-        <p className="text-xs font-bold text-slate-400">{time}</p>
+      <div className={cn('w-14 shrink-0 text-center', isLive ? 'mt-3' : '')}>
+        <p className="text-[10px] font-medium text-slate-600 uppercase">{date}</p>
+        <p className="text-xs font-bold text-slate-500">{time}</p>
       </div>
 
-      {/* Teams + score center */}
+      {/* Teams + score */}
       <div className={cn('flex flex-1 items-center justify-between gap-2 min-w-0', isLive ? 'mt-3' : '')}>
         {/* Home team */}
-        <div className="flex flex-1 items-center justify-end gap-1.5 min-w-0">
-          <span className="truncate text-sm font-semibold text-slate-200 text-right">
+        <div className="flex flex-1 items-center justify-end gap-2 min-w-0">
+          <span className="truncate text-sm font-semibold text-slate-200 text-right hidden sm:block">
             {match.homeTeam}
           </span>
-          <span className="text-base shrink-0">{getFlag(match.homeTeam)}</span>
+          <span className="truncate text-xs font-semibold text-slate-200 text-right sm:hidden">
+            {match.homeTeam.split(' ').slice(-1)[0]}
+          </span>
+          <Flag country={match.homeTeam} size={30} />
         </div>
 
         {/* Score / Inputs */}
@@ -150,7 +154,7 @@ export function MatchCard({ match, prediction, readOnly = false, onSaved }: Prop
                 {match.awayScore ?? '–'}
               </span>
             </div>
-            {/* User's prediction when match is played */}
+            {/* User's prediction */}
             {prediction && (
               <div className="hidden sm:flex flex-col items-center">
                 <span className="text-[9px] uppercase text-slate-600 font-semibold">tu pick</span>
@@ -163,16 +167,19 @@ export function MatchCard({ match, prediction, readOnly = false, onSaved }: Prop
         )}
 
         {/* Away team */}
-        <div className="flex flex-1 items-center gap-1.5 min-w-0">
-          <span className="text-base shrink-0">{getFlag(match.awayTeam)}</span>
-          <span className="truncate text-sm font-semibold text-slate-200">
+        <div className="flex flex-1 items-center gap-2 min-w-0">
+          <Flag country={match.awayTeam} size={30} />
+          <span className="truncate text-sm font-semibold text-slate-200 hidden sm:block">
             {match.awayTeam}
+          </span>
+          <span className="truncate text-xs font-semibold text-slate-200 sm:hidden">
+            {match.awayTeam.split(' ').slice(-1)[0]}
           </span>
         </div>
       </div>
 
       {/* Status indicator */}
-      <div className={cn('flex w-8 shrink-0 items-center justify-center', isLive ? 'mt-3' : '')}>
+      <div className={cn('flex w-7 shrink-0 items-center justify-center', isLive ? 'mt-3' : '')}>
         {!isLocked && status === 'saving' && (
           <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
         )}
