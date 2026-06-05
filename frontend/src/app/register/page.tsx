@@ -7,15 +7,17 @@ import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { AuthResponse } from '@/lib/types';
-import { Trophy, Loader2 } from 'lucide-react';
+import { Trophy, Loader2, AlertCircle } from 'lucide-react';
 
 export default function RegisterPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
     const form = new FormData(e.currentTarget);
     try {
@@ -29,7 +31,7 @@ export default function RegisterPage() {
       router.push('/predictions');
     } catch (err: any) {
       const msg = err.response?.data?.message ?? 'Error al registrarse.';
-      toast.error(Array.isArray(msg) ? msg[0] : msg);
+      setError(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setLoading(false);
     }
@@ -43,7 +45,6 @@ export default function RegisterPage() {
 
       <div className="relative w-full max-w-sm">
         <div className="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-8 backdrop-blur-sm shadow-2xl">
-          {/* Logo */}
           <div className="mb-8 flex flex-col items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20">
               <Trophy className="h-6 w-6 text-amber-400" />
@@ -64,6 +65,7 @@ export default function RegisterPage() {
                 name="name"
                 required
                 autoComplete="name"
+                onChange={() => setError('')}
                 className="w-full rounded-lg border border-slate-700/80 bg-slate-800/60 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-green-500/50 focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
                 placeholder="Como aparecerá en la tabla"
               />
@@ -78,6 +80,7 @@ export default function RegisterPage() {
                 type="email"
                 required
                 autoComplete="email"
+                onChange={() => setError('')}
                 className="w-full rounded-lg border border-slate-700/80 bg-slate-800/60 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-green-500/50 focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
                 placeholder="tu@email.com"
               />
@@ -93,15 +96,23 @@ export default function RegisterPage() {
                 required
                 minLength={6}
                 autoComplete="new-password"
+                onChange={() => setError('')}
                 className="w-full rounded-lg border border-slate-700/80 bg-slate-800/60 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-green-500/50 focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
                 placeholder="Mínimo 6 caracteres"
               />
             </div>
 
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2.5">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+                <p className="text-sm text-red-400">{error}</p>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 py-3 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 py-3 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
             >
               {loading ? (
                 <>

@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'flagcdn.com',
+        hostname: 'flagfeed.com',
         pathname: '/**',
       },
     ],

@@ -109,7 +109,7 @@ function ConfirmModal({
 }
 
 export default function PredictionsPage() {
-  const { user, login, token } = useAuth();
+  const { user, login, token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
@@ -117,13 +117,8 @@ export default function PredictionsPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    if (!user?.groupStageLockedAt) return;
-    // If already loaded, reflect locked state
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) router.push('/login');
-  }, [user, router]);
+    if (!authLoading && !user) router.push('/login');
+  }, [authLoading, user, router]);
 
   const { data: matches, isLoading: matchesLoading } = useQuery<Match[]>({
     queryKey: ['matches', 'GROUP_STAGE'],
@@ -187,7 +182,7 @@ export default function PredictionsPage() {
     }
   };
 
-  if (!user) return null;
+  if (authLoading || !user) return null;
 
   const totalMatches = matches?.length ?? 72;
   const savedCount = (predictions?.length ?? 0) + savedIds.size;

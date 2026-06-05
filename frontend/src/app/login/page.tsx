@@ -3,19 +3,20 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { AuthResponse } from '@/lib/types';
-import { Trophy, Loader2 } from 'lucide-react';
+import { Trophy, Loader2, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
     const form = new FormData(e.currentTarget);
     try {
@@ -26,7 +27,7 @@ export default function LoginPage() {
       login(data.access_token, data.user);
       router.push('/predictions');
     } catch {
-      toast.error('Credenciales incorrectas. Intenta de nuevo.');
+      setError('Email o contraseña incorrectos. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -34,13 +35,11 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
-      {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="h-96 w-96 rounded-full bg-green-500/5 blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-sm">
-        {/* Card */}
         <div className="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-8 backdrop-blur-sm shadow-2xl">
           {/* Logo */}
           <div className="mb-8 flex flex-col items-center gap-3">
@@ -64,6 +63,7 @@ export default function LoginPage() {
                 type="email"
                 required
                 autoComplete="email"
+                onChange={() => setError('')}
                 className="w-full rounded-lg border border-slate-700/80 bg-slate-800/60 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-green-500/50 focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
                 placeholder="tu@email.com"
               />
@@ -78,15 +78,24 @@ export default function LoginPage() {
                 type="password"
                 required
                 autoComplete="current-password"
+                onChange={() => setError('')}
                 className="w-full rounded-lg border border-slate-700/80 bg-slate-800/60 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-green-500/50 focus:outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
                 placeholder="••••••••"
               />
             </div>
 
+            {/* Inline error */}
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2.5">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+                <p className="text-sm text-red-400">{error}</p>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 py-3 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 py-3 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
             >
               {loading ? (
                 <>

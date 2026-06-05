@@ -59,11 +59,16 @@ function ScoreInput({
 }
 
 export function MatchCard({ match, prediction, readOnly = false, globalLocked = false, onSaved }: Props) {
-  const matchStarted = new Date(match.scheduledAt) <= new Date();
-  const isLocked = readOnly || globalLocked || matchStarted;
+  const isLocked = readOnly || globalLocked;
   const [home, setHome] = useState(prediction?.homeScore?.toString() ?? '');
   const [away, setAway] = useState(prediction?.awayScore?.toString() ?? '');
   const [status, setStatus] = useState<SaveStatus>('idle');
+
+  // Reset inputs when prediction is cleared or updated externally
+  useEffect(() => {
+    setHome(prediction?.homeScore?.toString() ?? '');
+    setAway(prediction?.awayScore?.toString() ?? '');
+  }, [prediction?.homeScore, prediction?.awayScore]);
 
   const debouncedHome = useDebounce(home, 1000);
   const debouncedAway = useDebounce(away, 1000);
@@ -133,7 +138,7 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
           <span className="truncate text-xs font-semibold text-slate-200 text-right sm:hidden">
             {match.homeTeam.split(' ').slice(-1)[0]}
           </span>
-          <Flag country={match.homeTeam} size={30} />
+          <Flag country={match.homeTeam} size={44} />
         </div>
 
         {/* Score / Inputs */}
@@ -154,7 +159,6 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
                 {match.awayScore ?? '–'}
               </span>
             </div>
-            {/* User's prediction */}
             {prediction && (
               <div className="hidden sm:flex flex-col items-center">
                 <span className="text-[9px] uppercase text-slate-600 font-semibold">tu pick</span>
@@ -168,7 +172,7 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
 
         {/* Away team */}
         <div className="flex flex-1 items-center gap-2 min-w-0">
-          <Flag country={match.awayTeam} size={30} />
+          <Flag country={match.awayTeam} size={44} />
           <span className="truncate text-sm font-semibold text-slate-200 hidden sm:block">
             {match.awayTeam}
           </span>

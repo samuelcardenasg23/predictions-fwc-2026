@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { MatchPhase } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UpsertPredictionDto } from './dto/upsert-prediction.dto.js';
 import { BulkPredictionsDto } from './dto/bulk-predictions.dto.js';
@@ -12,25 +13,41 @@ import { BulkPredictionsDto } from './dto/bulk-predictions.dto.js';
 export class PredictionsService {
   constructor(private prisma: PrismaService) {}
 
-  private async assertGroupStageOpen(userId: string, matchId: string) {
-    const [match, user] = await Promise.all([
-      this.prisma.match.findUnique({ where: { id: matchId } }),
-      this.prisma.user.findUnique({ where: { id: userId }, select: { groupStageLockedAt: true } }),
-    ]);
-
+  /**
+   * Group stage: all 72 matches share ONE global deadline — the first match's scheduledAt.
+   * Knockout: same logic — first R32 match's scheduledAt becomes the knockout deadline.
+   */
+  private async assertPhaseOpen(userId: string, matchId: string) {
+    const match = await this.prisma.match.findUnique({ where: { id: matchId } });
     if (!match) throw new NotFoundException(`Match ${matchId} not found`);
-    if (match.scheduledAt <= new Date()) {
-      throw new BadRequestException('Predictions are closed for this match');
+
+    // Phase deadline = earliest scheduledAt of the same phase
+    const firstMatch = await this.prisma.match.findFirst({
+      where: { phase: match.phase },
+      orderBy: { scheduledAt: 'asc' },
+      select: { scheduledAt: true },
+    });
+
+    if (firstMatch && firstMatch.scheduledAt <= new Date()) {
+      throw new BadRequestException('Predictions are closed for this phase');
     }
-    if (user?.groupStageLockedAt) {
-      throw new ForbiddenException('Your group stage predictions are locked');
+
+    // Manual group-stage lock
+    if (match.phase === MatchPhase.GROUP_STAGE) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { groupStageLockedAt: true },
+      });
+      if (user?.groupStageLockedAt) {
+        throw new ForbiddenException('Your group stage predictions are locked');
+      }
     }
 
     return match;
   }
 
   async upsert(userId: string, matchId: string, dto: UpsertPredictionDto) {
-    await this.assertGroupStageOpen(userId, matchId);
+    await this.assertPhaseOpen(userId, matchId);
     return this.prisma.prediction.upsert({
       where: { userId_matchId: { userId, matchId } },
       create: { userId, matchId, homeScore: dto.homeScore, awayScore: dto.awayScore },
@@ -45,7 +62,7 @@ export class PredictionsService {
 
     for (const item of dto.predictions) {
       try {
-        await this.assertGroupStageOpen(userId, item.matchId);
+        await this.assertPhaseOpen(userId, item.matchId);
         const prediction = await this.prisma.prediction.upsert({
           where: { userId_matchId: { userId, matchId: item.matchId } },
           create: {
@@ -75,9 +92,18 @@ export class PredictionsService {
       throw new BadRequestException('Group stage predictions are already locked');
     }
 
-    const count = await this.prisma.prediction.count({ where: { userId } });
-    if (count === 0) {
-      throw new BadRequestException('You have no predictions to lock');
+    // Require ALL group stage matches to have a prediction
+    const [totalGroupMatches, userGroupPreds] = await Promise.all([
+      this.prisma.match.count({ where: { phase: MatchPhase.GROUP_STAGE } }),
+      this.prisma.prediction.count({
+        where: { userId, match: { phase: MatchPhase.GROUP_STAGE } },
+      }),
+    ]);
+
+    if (userGroupPreds < totalGroupMatches) {
+      throw new BadRequestException(
+        `Debes completar los ${totalGroupMatches} pronósticos de la fase de grupos antes de finalizar. Te faltan ${totalGroupMatches - userGroupPreds}.`,
+      );
     }
 
     return this.prisma.user.update({

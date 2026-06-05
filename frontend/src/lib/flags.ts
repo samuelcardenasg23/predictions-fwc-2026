@@ -1,5 +1,5 @@
-// ISO 3166-1 alpha-2 codes — used with flagcdn.com
-// URL pattern: https://flagcdn.com/w40/{code}.png
+// ISO 3166-1 alpha-2 codes — used with flagfeed.com
+// URL: https://flagfeed.com/country/{iso2}
 const ISO2: Record<string, string> = {
   // Americas
   'United States': 'us',
@@ -31,7 +31,7 @@ const ISO2: Record<string, string> = {
   'Germany': 'de',
   'France': 'fr',
   'Spain': 'es',
-  'England': 'gb-eng',
+  'England': 'gb',
   'Portugal': 'pt',
   'Netherlands': 'nl',
   'Italy': 'it',
@@ -44,8 +44,8 @@ const ISO2: Record<string, string> = {
   'Serbia': 'rs',
   'Turkey': 'tr',
   'Ukraine': 'ua',
-  'Scotland': 'gb-sct',
-  'Wales': 'gb-wls',
+  'Scotland': 'gb',
+  'Wales': 'gb',
   'Hungary': 'hu',
   'Romania': 'ro',
   'Czech Republic': 'cz',
@@ -86,6 +86,13 @@ const ISO2: Record<string, string> = {
   'Mozambique': 'mz',
   'Angola': 'ao',
   'Kenya': 'ke',
+  'Benin': 'bj',
+  'Namibia': 'na',
+  'Sudan': 'sd',
+  'South Sudan': 'ss',
+  'Libya': 'ly',
+  'Rwanda': 'rw',
+  'Ethiopia': 'et',
 
   // Asia
   'Japan': 'jp',
@@ -106,14 +113,21 @@ const ISO2: Record<string, string> = {
   'Indonesia': 'id',
   'Thailand': 'th',
   'Vietnam': 'vn',
+  'Philippines': 'ph',
+  'Kyrgyzstan': 'kg',
+  'Tajikistan': 'tj',
 
   // Oceania
   'New Zealand': 'nz',
   'Fiji': 'fj',
+  'Papua New Guinea': 'pg',
+  'Vanuatu': 'vu',
+
+  // Special
 };
 
-export function getFlagUrl(country: string, size: 40 | 80 | 160 = 40): string | null {
+export function getFlagUrl(country: string): string | null {
   const code = ISO2[country];
   if (!code) return null;
-  return `https://flagcdn.com/w${size}/${code}.png`;
+  return `https://flagfeed.com/country/${code}`;
 }
