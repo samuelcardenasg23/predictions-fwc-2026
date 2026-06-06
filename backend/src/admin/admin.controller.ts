@@ -19,4 +19,16 @@ export class AdminController {
   testEmail(@Body('to') to: string) {
     return this.adminService.sendTestEmail(to);
   }
+
+  @Post('test-email/knockout-activation')
+  @HttpCode(HttpStatus.OK)
+  testKnockoutActivation(@Body('to') to: string) {
+    return this.adminService.sendTestKnockoutActivation(to);
+  }
+
+  @Post('test-email/knockout-reminder')
+  @HttpCode(HttpStatus.OK)
+  testKnockoutReminder(@Body('to') to: string) {
+    return this.adminService.sendTestKnockoutReminder(to);
+  }
 }

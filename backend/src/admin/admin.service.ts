@@ -85,6 +85,18 @@ export class AdminService {
     return { message: `Test email sent to ${to}` };
   }
 
+  async sendTestKnockoutActivation(to: string): Promise<{ message: string }> {
+    const deadline = new Date('2026-06-28T18:00:00.000Z');
+    await this.email.sendKnockoutActivation([{ email: to, name: 'Participante' }], deadline);
+    return { message: `Knockout activation email sent to ${to}` };
+  }
+
+  async sendTestKnockoutReminder(to: string): Promise<{ message: string }> {
+    const deadline = new Date('2026-06-28T18:00:00.000Z');
+    await this.email.sendKnockoutReminder([{ email: to, name: 'Participante' }], deadline);
+    return { message: `Knockout reminder email sent to ${to}` };
+  }
+
   private async getConfig(key: string): Promise<string | null> {
     const row = await this.prisma.systemConfig.findUnique({ where: { key } });
     return row?.value ?? null;

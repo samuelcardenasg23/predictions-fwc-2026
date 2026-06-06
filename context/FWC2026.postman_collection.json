@@ -249,7 +249,7 @@
           }
         },
         {
-          "name": "POST Test Email (SMTP)",
+          "name": "POST Test Email (SMTP — generic)",
           "request": {
             "method": "POST",
             "header": [
@@ -260,6 +260,44 @@
               "raw": "{{base_url}}/admin/test-email",
               "host": ["{{base_url}}"],
               "path": ["admin", "test-email"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"samuelcardenas1706@gmail.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST Test Email — Knockout Activation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/test-email/knockout-activation",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "test-email", "knockout-activation"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"samuelcardenas1706@gmail.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST Test Email — Knockout Reminder",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/test-email/knockout-reminder",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "test-email", "knockout-reminder"]
             },
             "body": {
               "mode": "raw",
