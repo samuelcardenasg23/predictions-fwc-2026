@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { PredictionsService } from './predictions.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { PlayerOnlyGuard } from '../auth/guards/player-only.guard.js';
 import { UpsertPredictionDto } from './dto/upsert-prediction.dto.js';
 import { BulkPredictionsDto } from './dto/bulk-predictions.dto.js';
 import { Request } from 'express';
@@ -14,21 +15,25 @@ interface AuthenticatedRequest extends Request {
 export class PredictionsController {
   constructor(private readonly predictionsService: PredictionsService) {}
 
+  @UseGuards(PlayerOnlyGuard)
   @Post('bulk')
   bulkUpsert(@Req() req: AuthenticatedRequest, @Body() dto: BulkPredictionsDto) {
     return this.predictionsService.bulkUpsert(req.user.id, dto);
   }
 
+  @UseGuards(PlayerOnlyGuard)
   @Post('lock-group-stage')
   lockGroupStage(@Req() req: AuthenticatedRequest) {
     return this.predictionsService.lockGroupStage(req.user.id);
   }
 
+  @UseGuards(PlayerOnlyGuard)
   @Delete('me')
   deleteAll(@Req() req: AuthenticatedRequest) {
     return this.predictionsService.deleteAll(req.user.id);
   }
 
+  @UseGuards(PlayerOnlyGuard)
   @Put(':matchId')
   upsert(
     @Req() req: AuthenticatedRequest,

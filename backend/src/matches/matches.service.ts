@@ -29,6 +29,9 @@ export class MatchesService {
         ...(dto.awayTeam !== undefined ? { awayTeam: dto.awayTeam } : {}),
         ...(dto.scheduledAt !== undefined ? { scheduledAt: new Date(dto.scheduledAt) } : {}),
         ...(dto.externalId !== undefined ? { externalId: dto.externalId } : {}),
+        ...(dto.homeScore !== undefined ? { homeScore: dto.homeScore } : {}),
+        ...(dto.awayScore !== undefined ? { awayScore: dto.awayScore } : {}),
+        ...(dto.status !== undefined ? { status: dto.status } : {}),
       },
     });
   }

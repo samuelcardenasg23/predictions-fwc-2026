@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { Trophy, LayoutGrid, BarChart3, LogOut, User, Grid3X3 } from 'lucide-react';
+import { Trophy, LayoutGrid, BarChart3, LogOut, User, Grid3X3, ShieldCheck } from 'lucide-react';
 
 export function Nav() {
   const { user, logout } = useAuth();
@@ -33,15 +33,22 @@ export function Nav() {
 
         {user ? (
           <nav className="flex items-center gap-1">
-            <NavLink href="/predictions" active={isActive('/predictions')} icon={<LayoutGrid className="h-3.5 w-3.5" />}>
-              Predicciones
-            </NavLink>
+            {user.role !== 'ADMIN' && (
+              <NavLink href="/predictions" active={isActive('/predictions')} icon={<LayoutGrid className="h-3.5 w-3.5" />}>
+                Predicciones
+              </NavLink>
+            )}
             <NavLink href="/leaderboard" active={isActive('/leaderboard')} icon={<BarChart3 className="h-3.5 w-3.5" />}>
               Tabla
             </NavLink>
             <NavLink href="/standings" active={isActive('/standings')} icon={<Grid3X3 className="h-3.5 w-3.5" />}>
               Grupos
             </NavLink>
+            {user.role === 'ADMIN' && (
+              <NavLink href="/admin" active={isActive('/admin')} icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                Admin
+              </NavLink>
+            )}
 
             <div className="ml-2 flex items-center gap-2 border-l border-slate-800 pl-3">
               <div className="flex items-center gap-1.5 text-sm text-slate-400">

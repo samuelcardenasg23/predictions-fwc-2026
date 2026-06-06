@@ -118,7 +118,9 @@ export default function PredictionsPage() {
   const [clearTrigger, setClearTrigger] = useState(0);
 
   useEffect(() => {
-    if (!authLoading && !user) router.push('/login');
+    if (authLoading) return;
+    if (!user) { router.push('/login'); return; }
+    if (user.role === 'ADMIN') router.replace('/admin');
   }, [authLoading, user, router]);
 
   const { data: matches, isLoading: matchesLoading } = useQuery<Match[]>({
@@ -185,7 +187,7 @@ export default function PredictionsPage() {
     }
   };
 
-  if (authLoading || !user) return null;
+  if (authLoading || !user || user.role === 'ADMIN') return null;
 
   const totalMatches = matches?.length ?? 72;
   const savedCount = (predictions?.length ?? 0) + savedIds.size;
