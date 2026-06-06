@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { promises as dns } from 'dns';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
@@ -20,16 +21,21 @@ export class EmailService implements OnModuleInit {
     this.frontendUrl = this.config.getOrThrow('FRONTEND_URL');
   }
 
-  onModuleInit() {
+  async onModuleInit(): Promise<void> {
+    const smtpHost = this.config.getOrThrow<string>('SMTP_HOST');
+    // nodemailer 8.x picks IPv4/IPv6 randomly; resolve to IPv4 to avoid unreachable AAAA records.
+    // tls.servername keeps cert validation against the hostname (not the IP).
+    const [ipv4] = await dns.resolve4(smtpHost);
+
     this.transporter = nodemailer.createTransport({
-      host: this.config.getOrThrow('SMTP_HOST'),
+      host: ipv4,
       port: this.config.get<number>('SMTP_PORT', 587),
-      secure: this.config.get<boolean>('SMTP_SECURE', false),
+      secure: false,
       auth: {
         user: this.config.getOrThrow('SMTP_USER'),
         pass: this.config.getOrThrow('SMTP_PASS'),
       },
-      tls: { ciphers: 'SSLv3' },
+      tls: { ciphers: 'SSLv3', servername: smtpHost },
     });
   }
 
