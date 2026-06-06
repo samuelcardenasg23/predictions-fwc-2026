@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import * as nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 
 interface Recipient {
   email: string;
@@ -8,16 +9,28 @@ interface Recipient {
 }
 
 @Injectable()
-export class EmailService {
+export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
-  private readonly resend: Resend;
+  private transporter: Transporter;
   private readonly from: string;
   private readonly frontendUrl: string;
 
   constructor(private readonly config: ConfigService) {
-    this.resend = new Resend(this.config.getOrThrow('RESEND_API_KEY'));
-    this.from = this.config.getOrThrow('RESEND_FROM_EMAIL');
+    this.from = this.config.getOrThrow('SMTP_FROM');
     this.frontendUrl = this.config.getOrThrow('FRONTEND_URL');
+  }
+
+  onModuleInit() {
+    this.transporter = nodemailer.createTransport({
+      host: this.config.getOrThrow('SMTP_HOST'),
+      port: this.config.get<number>('SMTP_PORT', 587),
+      secure: this.config.get<boolean>('SMTP_SECURE', false),
+      auth: {
+        user: this.config.getOrThrow('SMTP_USER'),
+        pass: this.config.getOrThrow('SMTP_PASS'),
+      },
+      tls: { ciphers: 'SSLv3' },
+    });
   }
 
   async sendKnockoutActivation(recipients: Recipient[], deadline: Date): Promise<void> {
@@ -56,28 +69,34 @@ export class EmailService {
     );
   }
 
+  async sendTestEmail(to: string): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.from,
+      to,
+      subject: '✅ Test SMTP — Quiniela FWC 2026',
+      html: '<p>El transporte SMTP funciona correctamente.</p>',
+    });
+    this.logger.log(`Test email sent to ${to}`);
+  }
+
   private async sendBatch(
     recipients: Recipient[],
     subject: string,
     htmlFn: (name: string) => string,
   ): Promise<void> {
-    // Resend batch: up to 100 emails per call
-    const BATCH_SIZE = 100;
-    for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
-      const batch = recipients.slice(i, i + BATCH_SIZE).map(({ email, name }) => ({
-        from: this.from,
-        to: email,
-        subject,
-        html: htmlFn(name),
-      }));
-
-      const { error } = await this.resend.batch.send(batch);
-      if (error) {
-        this.logger.error('Resend batch error', error);
-      } else {
-        this.logger.log(`Sent ${batch.length} emails — "${subject}"`);
+    for (const { email, name } of recipients) {
+      try {
+        await this.transporter.sendMail({
+          from: this.from,
+          to: email,
+          subject,
+          html: htmlFn(name),
+        });
+      } catch (err) {
+        this.logger.error(`Failed to send to ${email}`, err);
       }
     }
+    this.logger.log(`Sent ${recipients.length} emails — "${subject}"`);
   }
 
   private knockoutActivationHtml(name: string, deadline: string): string {

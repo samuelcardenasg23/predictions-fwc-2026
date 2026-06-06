@@ -247,6 +247,25 @@
               "path": ["admin", "activate-knockout"]
             }
           }
+        },
+        {
+          "name": "POST Test Email (SMTP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/test-email",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "test-email"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"samuelcardenas1706@gmail.com\"\n}"
+            }
+          }
         }
       ]
     },

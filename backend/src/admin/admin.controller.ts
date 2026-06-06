@@ -1,4 +1,4 @@
-import { Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { AdminGuard } from '../auth/guards/admin.guard.js';
 import { AdminService } from './admin.service.js';
@@ -12,5 +12,11 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   activateKnockout() {
     return this.adminService.activateKnockout();
+  }
+
+  @Post('test-email')
+  @HttpCode(HttpStatus.OK)
+  testEmail(@Body('to') to: string) {
+    return this.adminService.sendTestEmail(to);
   }
 }

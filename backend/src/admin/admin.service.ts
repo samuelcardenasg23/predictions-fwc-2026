@@ -80,6 +80,11 @@ export class AdminService {
     await this.setConfig(CONFIG_KEYS.knockoutReminderSent, 'true');
   }
 
+  async sendTestEmail(to: string): Promise<{ message: string }> {
+    await this.email.sendTestEmail(to);
+    return { message: `Test email sent to ${to}` };
+  }
+
   private async getConfig(key: string): Promise<string | null> {
     const row = await this.prisma.systemConfig.findUnique({ where: { key } });
     return row?.value ?? null;
