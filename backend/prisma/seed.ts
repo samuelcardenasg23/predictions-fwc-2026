@@ -53,7 +53,7 @@ const groupMatches: Array<{
 
   // ── GROUP F: Netherlands, Japan, Sweden, Tunisia ─────────────────────────
   { homeTeam: 'Países Bajos', awayTeam: 'Japón',       scheduledAt: new Date('2026-06-14T20:00:00Z'), groupName: 'F' },
-  { homeTeam: 'Túnez',        awayTeam: 'Suecia',      scheduledAt: new Date('2026-06-15T02:00:00Z'), groupName: 'F' },
+  { homeTeam: 'Suecia',       awayTeam: 'Túnez',       scheduledAt: new Date('2026-06-15T02:00:00Z'), groupName: 'F' },
   { homeTeam: 'Países Bajos', awayTeam: 'Suecia',      scheduledAt: new Date('2026-06-20T17:00:00Z'), groupName: 'F' },
   { homeTeam: 'Túnez',        awayTeam: 'Japón',       scheduledAt: new Date('2026-06-21T04:00:00Z'), groupName: 'F' },
   { homeTeam: 'Túnez',        awayTeam: 'Países Bajos',scheduledAt: new Date('2026-06-25T23:00:00Z'), groupName: 'F' },
