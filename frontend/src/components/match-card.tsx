@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Lock, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Lock, Loader2, Check, AlertCircle, X, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { Match, Prediction } from '@/lib/types';
@@ -19,6 +19,18 @@ interface Props {
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+function getPredictionResult(
+  prediction: { homeScore: number; awayScore: number },
+  match: { homeScore: number | null; awayScore: number | null },
+): 'exact' | 'outcome' | 'miss' {
+  if (match.homeScore === null || match.awayScore === null) return 'miss';
+  if (prediction.homeScore === match.homeScore && prediction.awayScore === match.awayScore) return 'exact';
+  const outcome = (h: number, a: number) => (h > a ? 'H' : h < a ? 'A' : 'D');
+  return outcome(prediction.homeScore, prediction.awayScore) === outcome(match.homeScore, match.awayScore)
+    ? 'outcome'
+    : 'miss';
+}
 
 function formatMatchDate(iso: string) {
   const d = new Date(iso);
@@ -110,6 +122,7 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
 
   const isLive = match.status === 'LIVE';
   const isFinished = match.status === 'FINISHED';
+  const resultType = isFinished && prediction ? getPredictionResult(prediction, match) : null;
 
   return (
     <div
@@ -118,7 +131,11 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
         isLive
           ? 'border-red-500/30 bg-red-500/5 shadow-sm shadow-red-500/10'
           : isFinished
-            ? 'border-slate-800/60 bg-slate-900/40'
+            ? resultType === 'exact'
+              ? 'border-green-500/20 bg-green-500/5'
+              : resultType === 'outcome'
+                ? 'border-blue-500/20 bg-blue-500/5'
+                : 'border-slate-800/60 bg-slate-900/40'
             : 'border-slate-800/60 bg-slate-900/30 hover:border-slate-700/60',
         isLocked && !isLive && !isFinished && 'opacity-70',
       )}
@@ -166,9 +183,20 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
               </span>
             </div>
             {prediction && (
-              <div className="hidden sm:flex flex-col items-center">
-                <span className="text-[9px] uppercase text-slate-600 font-semibold">tu pick</span>
-                <span className="text-xs font-mono text-slate-500">
+              <div className="flex flex-col items-center">
+                <span className={cn(
+                  'text-[9px] uppercase font-semibold',
+                  resultType === 'exact' ? 'text-green-500' :
+                  resultType === 'outcome' ? 'text-blue-400' :
+                  resultType === 'miss' ? 'text-red-500' : 'text-slate-600'
+                )}>
+                  {resultType === 'exact' ? 'exacta' : resultType === 'outcome' ? 'ganador' : resultType === 'miss' ? 'fallada' : 'tu pick'}
+                </span>
+                <span className={cn(
+                  'text-xs font-mono',
+                  resultType === 'exact' ? 'text-green-400 font-bold' :
+                  resultType === 'outcome' ? 'text-blue-400' : resultType === 'miss' ? 'text-red-400' : 'text-slate-500'
+                )}>
                   {prediction.homeScore}:{prediction.awayScore}
                 </span>
               </div>
@@ -200,6 +228,17 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
         )}
         {isLocked && !isFinished && !isLive && (
           <Lock className="h-3 w-3 text-slate-700" />
+        )}
+        {resultType === 'exact' && (
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/20">
+            <Check className="h-3 w-3 text-green-400" />
+          </div>
+        )}
+        {resultType === 'outcome' && (
+          <Target className="h-3.5 w-3.5 text-blue-400" />
+        )}
+        {resultType === 'miss' && (
+          <X className="h-3.5 w-3.5 text-red-400" />
         )}
       </div>
     </div>
