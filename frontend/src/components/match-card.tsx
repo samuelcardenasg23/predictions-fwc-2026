@@ -35,15 +35,15 @@ function getPredictionResult(
 function formatMatchDate(iso: string) {
   const d = new Date(iso);
   return {
-    date: d.toLocaleDateString('es-MX', {
+    date: d.toLocaleDateString('es-CO', {
       month: 'short',
       day: 'numeric',
-      timeZone: 'America/Mexico_City',
+      timeZone: 'America/Bogota',
     }),
-    time: d.toLocaleTimeString('es-MX', {
+    time: d.toLocaleTimeString('es-CO', {
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Mexico_City',
+      timeZone: 'America/Bogota',
     }),
   };
 }

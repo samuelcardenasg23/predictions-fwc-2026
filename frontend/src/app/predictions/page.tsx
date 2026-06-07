@@ -248,11 +248,12 @@ export default function PredictionsPage() {
               <div>
                 <p className="text-sm font-semibold text-green-400">Pronósticos bloqueados</p>
                 <p className="text-xs text-slate-500">
-                  Finalizados el {new Date(user.groupStageLockedAt!).toLocaleDateString('es-MX', {
+                  Finalizados el {new Date(user.groupStageLockedAt!).toLocaleDateString('es-CO', {
                     day: 'numeric',
                     month: 'long',
                     hour: '2-digit',
                     minute: '2-digit',
+                    timeZone: 'America/Bogota',
                   })}
                 </p>
               </div>

@@ -3,9 +3,7 @@ import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-// All times are UTC, converted from ET (EDT = UTC-4 in June/July)
-// Source: Fox Sports official schedule + FIFA.com
-// Group A MD3 times estimated from la-lista.com (not shown in Fox Sports data)
+// All times are UTC. Source: football-data.org (verified June 2026)
 
 const groupMatches: Array<{
   homeTeam: string;
@@ -18,8 +16,8 @@ const groupMatches: Array<{
   { homeTeam: 'Corea del Sur', awayTeam: 'Chequia',    scheduledAt: new Date('2026-06-12T02:00:00Z'), groupName: 'A' },
   { homeTeam: 'Chequia',      awayTeam: 'Sudáfrica',   scheduledAt: new Date('2026-06-18T16:00:00Z'), groupName: 'A' },
   { homeTeam: 'México',       awayTeam: 'Corea del Sur',scheduledAt: new Date('2026-06-19T01:00:00Z'), groupName: 'A' },
-  { homeTeam: 'Chequia',      awayTeam: 'México',      scheduledAt: new Date('2026-06-25T02:00:00Z'), groupName: 'A' },
-  { homeTeam: 'Sudáfrica',    awayTeam: 'Corea del Sur',scheduledAt: new Date('2026-06-25T02:00:00Z'), groupName: 'A' },
+  { homeTeam: 'Chequia',      awayTeam: 'México',      scheduledAt: new Date('2026-06-25T01:00:00Z'), groupName: 'A' },
+  { homeTeam: 'Sudáfrica',    awayTeam: 'Corea del Sur',scheduledAt: new Date('2026-06-25T01:00:00Z'), groupName: 'A' },
 
   // ── GROUP B: Canada, Bosnia and Herzegovina, Switzerland, Qatar ───────────
   { homeTeam: 'Canadá',       awayTeam: 'Bosnia y Herzegovina', scheduledAt: new Date('2026-06-12T19:00:00Z'), groupName: 'B' },
@@ -32,17 +30,17 @@ const groupMatches: Array<{
   // ── GROUP C: Brazil, Morocco, Haiti, Scotland ────────────────────────────
   { homeTeam: 'Brasil',       awayTeam: 'Marruecos',   scheduledAt: new Date('2026-06-13T22:00:00Z'), groupName: 'C' },
   { homeTeam: 'Haití',        awayTeam: 'Escocia',     scheduledAt: new Date('2026-06-14T01:00:00Z'), groupName: 'C' },
-  { homeTeam: 'Escocia',      awayTeam: 'Marruecos',   scheduledAt: new Date('2026-06-19T19:00:00Z'), groupName: 'C' },
-  { homeTeam: 'Brasil',       awayTeam: 'Haití',       scheduledAt: new Date('2026-06-20T01:00:00Z'), groupName: 'C' },
-  { homeTeam: 'Brasil',       awayTeam: 'Escocia',     scheduledAt: new Date('2026-06-24T22:00:00Z'), groupName: 'C' },
+  { homeTeam: 'Escocia',      awayTeam: 'Marruecos',   scheduledAt: new Date('2026-06-19T22:00:00Z'), groupName: 'C' },
+  { homeTeam: 'Brasil',       awayTeam: 'Haití',       scheduledAt: new Date('2026-06-20T00:30:00Z'), groupName: 'C' },
+  { homeTeam: 'Escocia',      awayTeam: 'Brasil',      scheduledAt: new Date('2026-06-24T22:00:00Z'), groupName: 'C' },
   { homeTeam: 'Marruecos',    awayTeam: 'Haití',       scheduledAt: new Date('2026-06-24T22:00:00Z'), groupName: 'C' },
 
   // ── GROUP D: USA, Paraguay, Australia, Türkiye ───────────────────────────
   { homeTeam: 'Estados Unidos', awayTeam: 'Paraguay',  scheduledAt: new Date('2026-06-13T01:00:00Z'), groupName: 'D' },
-  { homeTeam: 'Australia',    awayTeam: 'Turquía',     scheduledAt: new Date('2026-06-13T04:00:00Z'), groupName: 'D' },
+  { homeTeam: 'Australia',    awayTeam: 'Turquía',     scheduledAt: new Date('2026-06-14T04:00:00Z'), groupName: 'D' },
   { homeTeam: 'Estados Unidos', awayTeam: 'Australia', scheduledAt: new Date('2026-06-19T19:00:00Z'), groupName: 'D' },
-  { homeTeam: 'Turquía',      awayTeam: 'Paraguay',    scheduledAt: new Date('2026-06-19T04:00:00Z'), groupName: 'D' },
-  { homeTeam: 'Estados Unidos', awayTeam: 'Turquía',   scheduledAt: new Date('2026-06-26T02:00:00Z'), groupName: 'D' },
+  { homeTeam: 'Turquía',      awayTeam: 'Paraguay',    scheduledAt: new Date('2026-06-20T03:00:00Z'), groupName: 'D' },
+  { homeTeam: 'Turquía',      awayTeam: 'Estados Unidos', scheduledAt: new Date('2026-06-26T02:00:00Z'), groupName: 'D' },
   { homeTeam: 'Paraguay',     awayTeam: 'Australia',   scheduledAt: new Date('2026-06-26T02:00:00Z'), groupName: 'D' },
 
   // ── GROUP E: Germany, Curaçao, Ivory Coast, Ecuador ─────────────────────
@@ -57,7 +55,7 @@ const groupMatches: Array<{
   { homeTeam: 'Países Bajos', awayTeam: 'Japón',       scheduledAt: new Date('2026-06-14T20:00:00Z'), groupName: 'F' },
   { homeTeam: 'Túnez',        awayTeam: 'Suecia',      scheduledAt: new Date('2026-06-15T02:00:00Z'), groupName: 'F' },
   { homeTeam: 'Países Bajos', awayTeam: 'Suecia',      scheduledAt: new Date('2026-06-20T17:00:00Z'), groupName: 'F' },
-  { homeTeam: 'Túnez',        awayTeam: 'Japón',       scheduledAt: new Date('2026-06-20T04:00:00Z'), groupName: 'F' },
+  { homeTeam: 'Túnez',        awayTeam: 'Japón',       scheduledAt: new Date('2026-06-21T04:00:00Z'), groupName: 'F' },
   { homeTeam: 'Túnez',        awayTeam: 'Países Bajos',scheduledAt: new Date('2026-06-25T23:00:00Z'), groupName: 'F' },
   { homeTeam: 'Japón',        awayTeam: 'Suecia',      scheduledAt: new Date('2026-06-25T23:00:00Z'), groupName: 'F' },
 
@@ -87,10 +85,10 @@ const groupMatches: Array<{
 
   // ── GROUP J: Argentina, Algeria, Austria, Jordan ─────────────────────────
   { homeTeam: 'Argentina',    awayTeam: 'Argelia',     scheduledAt: new Date('2026-06-17T01:00:00Z'), groupName: 'J' },
-  { homeTeam: 'Austria',      awayTeam: 'Jordania',    scheduledAt: new Date('2026-06-16T04:00:00Z'), groupName: 'J' },
+  { homeTeam: 'Austria',      awayTeam: 'Jordania',    scheduledAt: new Date('2026-06-17T04:00:00Z'), groupName: 'J' },
   { homeTeam: 'Argentina',    awayTeam: 'Austria',     scheduledAt: new Date('2026-06-22T17:00:00Z'), groupName: 'J' },
   { homeTeam: 'Jordania',     awayTeam: 'Argelia',     scheduledAt: new Date('2026-06-23T03:00:00Z'), groupName: 'J' },
-  { homeTeam: 'Argentina',    awayTeam: 'Jordania',    scheduledAt: new Date('2026-06-28T02:00:00Z'), groupName: 'J' },
+  { homeTeam: 'Jordania',     awayTeam: 'Argentina',   scheduledAt: new Date('2026-06-28T02:00:00Z'), groupName: 'J' },
   { homeTeam: 'Argelia',      awayTeam: 'Austria',     scheduledAt: new Date('2026-06-28T02:00:00Z'), groupName: 'J' },
 
   // ── GROUP K: Portugal, DR Congo, Uzbekistan, Colombia ────────────────────

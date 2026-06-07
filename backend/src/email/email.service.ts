@@ -40,14 +40,14 @@ export class EmailService implements OnModuleInit {
   }
 
   async sendKnockoutActivation(recipients: Recipient[], deadline: Date): Promise<void> {
-    const deadlineStr = deadline.toLocaleDateString('es-MX', {
+    const deadlineStr = deadline.toLocaleDateString('es-CO', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Mexico_City',
+      timeZone: 'America/Bogota',
     });
 
     await this.sendBatch(
@@ -58,14 +58,14 @@ export class EmailService implements OnModuleInit {
   }
 
   async sendKnockoutReminder(recipients: Recipient[], deadline: Date): Promise<void> {
-    const deadlineStr = deadline.toLocaleDateString('es-MX', {
+    const deadlineStr = deadline.toLocaleDateString('es-CO', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Mexico_City',
+      timeZone: 'America/Bogota',
     });
 
     await this.sendBatch(
@@ -114,7 +114,7 @@ export class EmailService implements OnModuleInit {
           playoff están disponibles para que hagas tus pronósticos.
         </p>
         <p style="font-size:16px;color:#333">
-          <strong>Tienes hasta el ${deadline} (hora Ciudad de México)</strong> para
+          <strong>Tienes hasta el ${deadline} (hora Colombia)</strong> para
           registrar tus predicciones antes de que empiece el primer partido.
         </p>
         <a href="${this.frontendUrl}/predictions/knockout"
@@ -136,7 +136,7 @@ export class EmailService implements OnModuleInit {
         <h1 style="color:#1a1a1a">¡Últimas 24 horas, ${name}! ⏰</h1>
         <p style="font-size:16px;color:#333">
           El tiempo se acaba. Los pronósticos de la fase eliminatoria cierran el
-          <strong>${deadline} (hora Ciudad de México)</strong>.
+          <strong>${deadline} (hora Colombia)</strong>.
         </p>
         <p style="font-size:16px;color:#333">
           Si aún te faltan partidos por pronosticar, ¡entra ahora antes de que sea tarde!
