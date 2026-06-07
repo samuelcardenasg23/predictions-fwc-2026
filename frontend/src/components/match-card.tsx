@@ -144,9 +144,6 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
           <span className="truncate text-sm font-semibold text-slate-200 text-right hidden sm:block">
             {match.homeTeam}
           </span>
-          <span className="truncate text-xs font-semibold text-slate-200 text-right sm:hidden">
-            {match.homeTeam.split(' ').slice(-1)[0]}
-          </span>
           <Flag country={match.homeTeam} size={44} />
         </div>
 
@@ -184,9 +181,6 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
           <Flag country={match.awayTeam} size={44} />
           <span className="truncate text-sm font-semibold text-slate-200 hidden sm:block">
             {match.awayTeam}
-          </span>
-          <span className="truncate text-xs font-semibold text-slate-200 sm:hidden">
-            {match.awayTeam.split(' ').slice(-1)[0]}
           </span>
         </div>
       </div>

@@ -80,6 +80,21 @@ export default function LeaderboardPage() {
               Actualizado {updatedAt} · refresca cada 30s
             </p>
           )}
+          {/* Legend — arriba para no tener que hacer scroll */}
+          <div className="mt-2 flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1 text-[11px] text-slate-500">
+              <Target className="h-3 w-3 text-green-400" />
+              Exactas
+            </div>
+            <div className="flex items-center gap-1 text-[11px] text-slate-500">
+              <Zap className="h-3 w-3 text-blue-400" />
+              Ganador
+            </div>
+            <div className="flex items-center gap-1 text-[11px] text-slate-500">
+              <Star className="h-3 w-3 text-slate-500" />
+              Jugados
+            </div>
+          </div>
         </div>
         {myRank && (
           <div className="shrink-0 rounded-xl border border-slate-800/60 bg-slate-900/50 px-4 py-3 text-right">
@@ -109,18 +124,18 @@ export default function LeaderboardPage() {
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-800/60 bg-slate-900/50">
           {/* Table header */}
-          <div className="grid grid-cols-[48px_40px_1fr_72px_48px_48px_48px] items-center gap-2 border-b border-slate-800 px-4 py-3">
+          <div className="grid grid-cols-[32px_30px_1fr_50px_30px_30px_30px] sm:grid-cols-[48px_40px_1fr_72px_48px_48px_48px] items-center gap-2 border-b border-slate-800 px-4 py-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600">#</div>
             <div />
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Jugador</div>
             <div className="text-center text-[10px] font-bold uppercase tracking-wider text-green-500">Pts</div>
-            <div className="hidden sm:block text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">
+            <div className="text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">
               <Target className="mx-auto h-3 w-3" />
             </div>
-            <div className="hidden sm:block text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">
+            <div className="text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">
               <Zap className="mx-auto h-3 w-3" />
             </div>
-            <div className="hidden sm:block text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">
+            <div className="text-center text-[10px] font-bold uppercase tracking-wider text-slate-600">
               <Star className="mx-auto h-3 w-3" />
             </div>
           </div>
@@ -131,8 +146,8 @@ export default function LeaderboardPage() {
             return (
               <div
                 key={entry.userId}
-                className={`grid grid-cols-[48px_40px_1fr_72px_48px_48px_48px] items-center gap-2 px-4 py-3.5 border-b border-slate-800/50 last:border-0 transition-colors hover:bg-slate-800/30 ${
-                  isMe ? 'bg-green-500/5 border-l-2 border-l-green-500/40' : ''
+                className={`grid grid-cols-[32px_30px_1fr_50px_30px_30px_30px] sm:grid-cols-[48px_40px_1fr_72px_48px_48px_48px] items-center gap-2 px-4 py-3.5 border-b border-slate-800/50 last:border-0 transition-colors hover:bg-slate-800/30 ${
+                  isMe ? 'bg-green-500/8 border-l-[3px] border-l-green-500/60 ring-inset ring-1 ring-green-500/10' : ''
                 }`}
               >
                 {/* Rank */}
@@ -168,38 +183,23 @@ export default function LeaderboardPage() {
                 </div>
 
                 {/* Exact */}
-                <div className="hidden sm:block text-center text-sm font-bold text-green-400">
+                <div className="text-center text-xs sm:text-sm font-bold text-green-400">
                   {entry.exactPredictions}
                 </div>
 
                 {/* Outcome */}
-                <div className="hidden sm:block text-center text-sm font-medium text-blue-400">
+                <div className="text-center text-xs sm:text-sm font-medium text-blue-400">
                   {entry.outcomePredictions}
                 </div>
 
                 {/* Played */}
-                <div className="hidden sm:block text-center text-sm text-slate-600">
+                <div className="text-center text-xs sm:text-sm text-slate-600">
                   {entry.totalPredictions}
                 </div>
               </div>
             );
           })}
 
-          {/* Legend */}
-          <div className="flex items-center gap-4 border-t border-slate-800/60 px-4 py-2.5">
-            <div className="flex items-center gap-1 text-[10px] text-slate-600">
-              <Target className="h-3 w-3 text-green-400" />
-              Exactas
-            </div>
-            <div className="flex items-center gap-1 text-[10px] text-slate-600">
-              <Zap className="h-3 w-3 text-blue-400" />
-              Ganador
-            </div>
-            <div className="flex items-center gap-1 text-[10px] text-slate-600">
-              <Star className="h-3 w-3" />
-              Jugados
-            </div>
-          </div>
         </div>
       )}
     </div>

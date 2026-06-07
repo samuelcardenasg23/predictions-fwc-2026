@@ -312,6 +312,28 @@ export default function PredictionsPage() {
                 </div>
               </section>
             ))}
+
+            {/* Bottom action buttons — repeat for convenience after scrolling through all matches */}
+            {!isGloballyLocked && (
+              <div className="border-t border-slate-800/60 pt-6 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setModal('lock')}
+                  disabled={savedCount === 0}
+                  className="flex items-center gap-2 rounded-xl bg-green-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
+                >
+                  <Lock className="h-4 w-4" />
+                  Finalizar predicciones
+                </button>
+                <button
+                  onClick={() => setModal('clear')}
+                  disabled={savedCount === 0}
+                  className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 hover:border-red-500/40 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Borrar todo
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
