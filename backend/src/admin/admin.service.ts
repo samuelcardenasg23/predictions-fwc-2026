@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { MatchStage, MatchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { EmailService } from '../email/email.service.js';
+import { CreateMatchesBatchDto } from './dto/create-matches-batch.dto.js';
 
 const CONFIG_KEYS = {
   knockoutActivated: 'knockout_activated',
@@ -78,6 +79,27 @@ export class AdminService {
 
     await this.email.sendKnockoutReminder(users, firstR32.scheduledAt);
     await this.setConfig(CONFIG_KEYS.knockoutReminderSent, 'true');
+  }
+
+  async createMatchesBatch(dto: CreateMatchesBatchDto): Promise<{ created: number }> {
+    const created = await this.prisma.$transaction(
+      dto.matches.map((m) =>
+        this.prisma.match.create({
+          data: {
+            homeTeam: m.homeTeam,
+            awayTeam: m.awayTeam,
+            scheduledAt: new Date(m.scheduledAt),
+            stage: m.stage,
+            phase: m.phase,
+            homeTeamOpts: m.homeTeamOpts ?? null,
+            awayTeamOpts: m.awayTeamOpts ?? null,
+            matchOrder: m.matchOrder ?? null,
+          },
+        }),
+      ),
+    );
+    this.logger.log(`Batch created ${created.length} matches`);
+    return { created: created.length };
   }
 
   async sendTestEmail(to: string): Promise<{ message: string }> {

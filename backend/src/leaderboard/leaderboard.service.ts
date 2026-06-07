@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MatchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { calculatePoints } from '../scoring/scoring.util.js';
+import { calculatePoints, calculateTeamBonus } from '../scoring/scoring.util.js';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -10,6 +10,7 @@ export interface LeaderboardEntry {
   totalPoints: number;
   exactPredictions: number;
   outcomePredictions: number;
+  teamBonusPredictions: number;
   totalPredictions: number;
 }
 
@@ -18,14 +19,14 @@ export class LeaderboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
-    // Include ALL predictions — we'll compute points only for played matches
-    // so every user with at least one prediction appears in the table from day 1
     const predictions = await this.prisma.prediction.findMany({
       include: {
         match: {
           select: {
             homeScore: true,
             awayScore: true,
+            homeTeam: true,
+            awayTeam: true,
             stage: true,
             status: true,
           },
@@ -36,7 +37,7 @@ export class LeaderboardService {
 
     const statsMap = new Map<
       string,
-      { name: string; totalPoints: number; exact: number; outcome: number; total: number }
+      { name: string; totalPoints: number; exact: number; outcome: number; teamBonus: number; total: number }
     >();
 
     for (const pred of predictions) {
@@ -48,6 +49,7 @@ export class LeaderboardService {
           totalPoints: 0,
           exact: 0,
           outcome: 0,
+          teamBonus: 0,
           total: 0,
         });
       }
@@ -55,7 +57,6 @@ export class LeaderboardService {
       const entry = statsMap.get(user.id)!;
       entry.total += 1;
 
-      // Only score predictions for matches that have been played
       const isPlayed =
         (match.status === MatchStatus.LIVE || match.status === MatchStatus.FINISHED) &&
         match.homeScore !== null &&
@@ -68,15 +69,20 @@ export class LeaderboardService {
         { homeScore: match.homeScore!, awayScore: match.awayScore!, stage: match.stage },
       );
 
+      const bonus = calculateTeamBonus(
+        { homeTeamPick: pred.homeTeamPick, awayTeamPick: pred.awayTeamPick },
+        { homeTeam: match.homeTeam, awayTeam: match.awayTeam, stage: match.stage },
+      );
+
       const isExact =
         pred.homeScore === match.homeScore && pred.awayScore === match.awayScore;
 
-      entry.totalPoints += pts;
+      entry.totalPoints += pts + bonus;
       if (isExact) entry.exact += 1;
       else if (pts > 0) entry.outcome += 1;
+      if (bonus > 0) entry.teamBonus += bonus;
     }
 
-    // Sort by totalPoints desc, then by total predictions desc (more active players rank higher on tie)
     const sorted = [...statsMap.entries()]
       .sort((a, b) =>
         b[1].totalPoints !== a[1].totalPoints
@@ -90,6 +96,7 @@ export class LeaderboardService {
         totalPoints: s.totalPoints,
         exactPredictions: s.exact,
         outcomePredictions: s.outcome,
+        teamBonusPredictions: s.teamBonus,
         totalPredictions: s.total,
       }));
 

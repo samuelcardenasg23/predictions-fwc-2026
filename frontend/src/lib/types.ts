@@ -23,6 +23,8 @@ export interface Match {
   phase: MatchPhase;
   groupName: string | null;
   matchOrder: number | null;
+  homeTeamOpts: string | null;
+  awayTeamOpts: string | null;
 }
 
 export interface Prediction {
@@ -31,6 +33,8 @@ export interface Prediction {
   userId: string;
   homeScore: number;
   awayScore: number;
+  homeTeamPick: string | null;
+  awayTeamPick: string | null;
   match?: Match;
 }
 
@@ -41,6 +45,7 @@ export interface LeaderboardEntry {
   totalPoints: number;
   exactPredictions: number;
   outcomePredictions: number;
+  teamBonusPredictions: number;
   totalPredictions: number;
 }
 

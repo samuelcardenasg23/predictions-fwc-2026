@@ -50,8 +50,20 @@ export class PredictionsService {
     await this.assertPhaseOpen(userId, matchId);
     return this.prisma.prediction.upsert({
       where: { userId_matchId: { userId, matchId } },
-      create: { userId, matchId, homeScore: dto.homeScore, awayScore: dto.awayScore },
-      update: { homeScore: dto.homeScore, awayScore: dto.awayScore },
+      create: {
+        userId,
+        matchId,
+        homeScore: dto.homeScore,
+        awayScore: dto.awayScore,
+        homeTeamPick: dto.homeTeamPick ?? null,
+        awayTeamPick: dto.awayTeamPick ?? null,
+      },
+      update: {
+        homeScore: dto.homeScore,
+        awayScore: dto.awayScore,
+        ...(dto.homeTeamPick !== undefined ? { homeTeamPick: dto.homeTeamPick } : {}),
+        ...(dto.awayTeamPick !== undefined ? { awayTeamPick: dto.awayTeamPick } : {}),
+      },
       include: { match: true },
     });
   }
@@ -70,8 +82,15 @@ export class PredictionsService {
             matchId: item.matchId,
             homeScore: item.homeScore,
             awayScore: item.awayScore,
+            homeTeamPick: item.homeTeamPick ?? null,
+            awayTeamPick: item.awayTeamPick ?? null,
           },
-          update: { homeScore: item.homeScore, awayScore: item.awayScore },
+          update: {
+            homeScore: item.homeScore,
+            awayScore: item.awayScore,
+            ...(item.homeTeamPick !== undefined ? { homeTeamPick: item.homeTeamPick } : {}),
+            ...(item.awayTeamPick !== undefined ? { awayTeamPick: item.awayTeamPick } : {}),
+          },
         });
         results.push(prediction);
       } catch (err: any) {

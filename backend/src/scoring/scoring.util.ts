@@ -35,3 +35,16 @@ export function calculatePoints(
 
   return sameOutcome ? pts.outcome : 0;
 }
+
+const TEAM_BONUS_STAGES = new Set<MatchStage>(['R16', 'QF', 'SF', 'THIRD_PLACE', 'FINAL']);
+
+export function calculateTeamBonus(
+  prediction: { homeTeamPick?: string | null; awayTeamPick?: string | null },
+  match: { homeTeam: string; awayTeam: string; stage: MatchStage },
+): number {
+  if (!TEAM_BONUS_STAGES.has(match.stage)) return 0;
+  let bonus = 0;
+  if (prediction.homeTeamPick && prediction.homeTeamPick === match.homeTeam) bonus += 1;
+  if (prediction.awayTeamPick && prediction.awayTeamPick === match.awayTeam) bonus += 1;
+  return bonus;
+}

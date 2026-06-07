@@ -1,4 +1,4 @@
-import { IsInt, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class UpsertPredictionDto {
   @IsInt()
@@ -8,4 +8,12 @@ export class UpsertPredictionDto {
   @IsInt()
   @Min(0)
   awayScore: number;
+
+  @IsOptional()
+  @IsString()
+  homeTeamPick?: string;
+
+  @IsOptional()
+  @IsString()
+  awayTeamPick?: string;
 }
