@@ -151,7 +151,13 @@ export default function PredictionsPage() {
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [matches]);
 
-  const isGloballyLocked = !!user?.groupStageLockedAt;
+  const tournamentStarted = useMemo(() => {
+    if (!matches || matches.length === 0) return false;
+    const firstKickoff = Math.min(...matches.map((m) => new Date(m.scheduledAt).getTime()));
+    return firstKickoff <= Date.now();
+  }, [matches]);
+
+  const isGloballyLocked = !!user?.groupStageLockedAt || tournamentStarted;
 
   const handleLock = async () => {
     setActionLoading(true);
@@ -220,7 +226,9 @@ export default function PredictionsPage() {
               <h1 className="text-2xl font-black text-slate-100">Mis pronósticos</h1>
               <p className="text-sm text-slate-500 mt-1">
                 {isGloballyLocked
-                  ? 'Tus predicciones están finalizadas y bloqueadas.'
+                  ? user.groupStageLockedAt
+                    ? 'Tus predicciones están finalizadas y bloqueadas.'
+                    : 'El torneo ya comenzó. Los pronósticos están cerrados.'
                   : 'Se guardan automáticamente · Cierre antes de cada partido'}
               </p>
             </div>
@@ -248,13 +256,15 @@ export default function PredictionsPage() {
               <div>
                 <p className="text-sm font-semibold text-green-400">Pronósticos bloqueados</p>
                 <p className="text-xs text-slate-500">
-                  Finalizados el {new Date(user.groupStageLockedAt!).toLocaleDateString('es-CO', {
-                    day: 'numeric',
-                    month: 'long',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'America/Bogota',
-                  })}
+                  {user.groupStageLockedAt
+                    ? `Finalizados el ${new Date(user.groupStageLockedAt).toLocaleDateString('es-CO', {
+                        day: 'numeric',
+                        month: 'long',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'America/Bogota',
+                      })}`
+                    : 'El torneo ya comenzó — los pronósticos de fase de grupos están cerrados.'}
                 </p>
               </div>
             </div>
