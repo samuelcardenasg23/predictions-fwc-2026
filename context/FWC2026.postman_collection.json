@@ -91,6 +91,14 @@
           }
         },
         {
+          "name": "GET Stages Status (usuario regular)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/matches/stages/status", "host": ["{{base_url}}"], "path": ["matches","stages","status"] }
+          }
+        },
+        {
           "name": "GET Single Match",
           "request": {
             "method": "GET",
@@ -113,10 +121,10 @@
       ]
     },
     {
-      "name": "Predictions",
+      "name": "Predictions — Grupos",
       "item": [
         {
-          "name": "PUT Single Prediction (score only)",
+          "name": "PUT Single Prediction",
           "request": {
             "method": "PUT",
             "header": [
@@ -140,6 +148,22 @@
           }
         },
         {
+          "name": "POST Lock Group Stage (finalizar)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/lock-group-stage", "host": ["{{base_url}}"], "path": ["predictions","lock-group-stage"] }
+          }
+        },
+        {
+          "name": "DELETE All My Predictions",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/me", "host": ["{{base_url}}"], "path": ["predictions","me"] }
+          }
+        },
+        {
           "name": "GET My Predictions",
           "request": {
             "method": "GET",
@@ -154,13 +178,54 @@
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": { "raw": "{{base_url}}/predictions/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["predictions","user","{{user_id}}"] }
           }
+        }
+      ]
+    },
+    {
+      "name": "Predictions — Knockout",
+      "item": [
+        {
+          "name": "PUT Single Prediction (knockout)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/predictions/{{match_id}}", "host": ["{{base_url}}"], "path": ["predictions","{{match_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"homeScore\": 1,\n  \"awayScore\": 0\n}" }
+          }
         },
         {
-          "name": "POST Lock Group Stage",
+          "name": "POST Lock Knockout Stage (finalizar fase)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{base_url}}/predictions/lock-group-stage", "host": ["{{base_url}}"], "path": ["predictions","lock-group-stage"] }
+            "url": { "raw": "{{base_url}}/predictions/lock-stage/R32", "host": ["{{base_url}}"], "path": ["predictions","lock-stage","R32"] }
+          }
+        },
+        {
+          "name": "GET My Stage Locks",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/my-stage-locks", "host": ["{{base_url}}"], "path": ["predictions","my-stage-locks"] }
+          }
+        },
+        {
+          "name": "DELETE My Predictions — Stage R32",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/me/stage/R32", "host": ["{{base_url}}"], "path": ["predictions","me","stage","R32"] }
+          }
+        },
+        {
+          "name": "DELETE My Predictions — Stage R16",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/me/stage/R16", "host": ["{{base_url}}"], "path": ["predictions","me","stage","R16"] }
           }
         }
       ]
@@ -169,7 +234,7 @@
       "name": "Admin — Stages (fase por fase)",
       "item": [
         {
-          "name": "GET Stages Status",
+          "name": "GET Stages Status (admin)",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
