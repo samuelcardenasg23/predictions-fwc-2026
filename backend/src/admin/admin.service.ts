@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { MatchStage, MatchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { EmailService } from '../email/email.service.js';
 import { CreateMatchesBatchDto } from './dto/create-matches-batch.dto.js';
+import { CreateMatchDto } from './dto/create-match.dto.js';
 
 const KNOCKOUT_STAGES: MatchStage[] = ['R32', 'R16', 'QF', 'SF', 'THIRD_PLACE', 'FINAL'];
 
@@ -121,6 +122,41 @@ export class AdminService {
     );
     this.logger.log(`Batch created ${created.length} matches`);
     return { created: created.length };
+  }
+
+  async createMatch(dto: CreateMatchDto) {
+    const match = await this.prisma.match.create({
+      data: {
+        homeTeam: dto.homeTeam,
+        awayTeam: dto.awayTeam,
+        scheduledAt: new Date(dto.scheduledAt),
+        stage: dto.stage,
+        phase: dto.phase,
+        matchOrder: dto.matchOrder ?? null,
+      },
+    });
+    this.logger.log(`Created match ${match.id}: ${match.homeTeam} vs ${match.awayTeam}`);
+    return match;
+  }
+
+  async deleteMatch(id: string) {
+    const match = await this.prisma.match.findUnique({ where: { id } });
+    if (!match) throw new NotFoundException('Partido no encontrado');
+
+    if (match.scheduledAt <= new Date()) {
+      throw new BadRequestException('No se puede eliminar un partido que ya comenzó o fue programado en el pasado');
+    }
+
+    const predCount = await this.prisma.prediction.count({ where: { matchId: id } });
+    if (predCount > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar — ${predCount} usuario(s) ya tienen predicciones para este partido`,
+      );
+    }
+
+    await this.prisma.match.delete({ where: { id } });
+    this.logger.log(`Deleted match ${id}`);
+    return { deleted: true };
   }
 
   async sendTestEmail(to: string): Promise<{ message: string }> {

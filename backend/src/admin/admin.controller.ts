@@ -1,9 +1,10 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
 import { MatchStage } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { AdminGuard } from '../auth/guards/admin.guard.js';
 import { AdminService } from './admin.service.js';
 import { CreateMatchesBatchDto } from './dto/create-matches-batch.dto.js';
+import { CreateMatchDto } from './dto/create-match.dto.js';
 
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin')
@@ -14,6 +15,18 @@ export class AdminController {
   @HttpCode(HttpStatus.CREATED)
   createMatchesBatch(@Body() dto: CreateMatchesBatchDto) {
     return this.adminService.createMatchesBatch(dto);
+  }
+
+  @Post('matches')
+  @HttpCode(HttpStatus.CREATED)
+  createMatch(@Body() dto: CreateMatchDto) {
+    return this.adminService.createMatch(dto);
+  }
+
+  @Delete('matches/:id')
+  @HttpCode(HttpStatus.OK)
+  deleteMatch(@Param('id') id: string) {
+    return this.adminService.deleteMatch(id);
   }
 
   @Post('stages/:stage/activate')
