@@ -181,7 +181,7 @@ function StageSection({
   const [activating, setActivating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ homeTeam: string; awayTeam: string }>({ homeTeam: '', awayTeam: '' });
+  const [editForm, setEditForm] = useState<{ homeTeam: string; awayTeam: string; scheduledAt: string }>({ homeTeam: '', awayTeam: '', scheduledAt: '' });
   const [editSaving, setEditSaving] = useState(false);
 
   async function addMatch() {
@@ -216,9 +216,14 @@ function StageSection({
 
   function startEdit(match: Match) {
     setEditingId(match.id);
+    // Convert ISO date to datetime-local format (YYYY-MM-DDTHH:mm)
+    const local = new Date(match.scheduledAt);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const scheduledAtLocal = `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(local.getHours())}:${pad(local.getMinutes())}`;
     setEditForm({
       homeTeam: match.homeTeam === 'TBD' ? '' : match.homeTeam,
       awayTeam: match.awayTeam === 'TBD' ? '' : match.awayTeam,
+      scheduledAt: scheduledAtLocal,
     });
   }
 
@@ -231,9 +236,16 @@ function StageSection({
       toast.error('Los equipos no pueden ser iguales');
       return;
     }
+    if (!editForm.scheduledAt) {
+      toast.error('Selecciona la fecha y hora');
+      return;
+    }
     setEditSaving(true);
     try {
-      await api.patch(`/admin/matches/${matchId}`, editForm);
+      await api.patch(`/admin/matches/${matchId}`, {
+        ...editForm,
+        scheduledAt: new Date(editForm.scheduledAt).toISOString(),
+      });
       toast.success(`Actualizado: ${editForm.homeTeam} vs ${editForm.awayTeam}`);
       setEditingId(null);
       onInvalidate();
@@ -460,6 +472,15 @@ function StageSection({
                                 value={editForm.awayTeam}
                                 onChange={(v) => setEditForm((f) => ({ ...f, awayTeam: v }))}
                                 placeholder="Equipo visitante"
+                              />
+                            </div>
+                            <div className="space-y-1 sm:col-span-2">
+                              <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Fecha y hora</label>
+                              <input
+                                type="datetime-local"
+                                value={editForm.scheduledAt}
+                                onChange={(e) => setEditForm((f) => ({ ...f, scheduledAt: e.target.value }))}
+                                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                               />
                             </div>
                           </div>
