@@ -38,7 +38,7 @@ pnpm --filter frontend lint
 ## Architecture
 
 ### Monorepo
-`pnpm-workspace.yaml` declares two packages: `frontend/` and `backend/`. No build pipeline tool (no Turborepo). Deploy independently: Vercel for frontend, Railway for backend.
+`pnpm-workspace.yaml` declares two packages: `frontend/` and `backend/`. No build pipeline tool (no Turborepo).
 
 ### Backend (`backend/` — NestJS 11)
 

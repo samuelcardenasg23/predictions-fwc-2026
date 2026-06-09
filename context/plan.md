@@ -19,7 +19,7 @@ Samuel quiere construir una quiniela para el Mundial 2026 de fútbol, bien hecha
 | API de resultados | API-Football (free tier, 100 req/día) — cambiar si hace falta |
 | Base de datos | PostgreSQL local con migraciones (Prisma v6) |
 | Estructura | Monorepo pnpm workspaces (sin Turborepo) |
-| Deploy | Vercel (frontend/) + Railway (backend/) |
+
 | Email | Resend (free tier: 3,000 emails/mes) |
 
 ### Tabla de puntos por ronda
@@ -46,10 +46,6 @@ predictions-fwc-2026/
 ├── pnpm-workspace.yaml
 └── package.json      # scripts raíz con concurrently
 ```
-
-**Deploy:**
-- **Vercel**: conectar el repo, configurar root directory → `frontend/`. Sin configuración extra.
-- **Railway**: conectar el mismo repo, configurar root directory → `backend/`. Variables de entorno en Railway dashboard.
 
 **Backend (`backend/` — NestJS 11):**
 - Prisma v6 + PostgreSQL (migraciones versionadas). **No usar Prisma v7** — genera código ESM incompatible con el output CJS de NestJS.
@@ -187,7 +183,7 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 24. ✅ Nav sticky con auth state (muestra nombre + botón salir si autenticado)
 25. ✅ AuthContext (localStorage), QueryProvider (TanStack Query), Toaster (sonner)
 26. ✅ Interceptor axios: agrega Bearer token y redirige a /login en 401
-27. Deploy a Vercel + Railway — pendiente
+27. Deploy — pendiente (estrategia TBD)
 
 ---
 
@@ -203,4 +199,4 @@ El leaderboard se calcula dinámicamente en el backend cruzando `Prediction` vs 
 - **Fase 2** ✅: usuario puede ingresar 48 predicciones de grupos vía bulk o auto-save, verlas en `GET /predictions/me`, y ver las de otro usuario en `GET /predictions/user/:id`
 - **Fase 3** ✅: con un partido LIVE, score se actualiza en DB en <2min y leaderboard refleja puntos con multiplicador correcto
 - **Fase 4** ✅: al activar fase knockout, todos los usuarios reciben el email de Resend con el link
-- **Fase 5**: deploy funcionando en Vercel + Railway con variables de entorno correctas
+- **Fase 5**: deploy — estrategia TBD
