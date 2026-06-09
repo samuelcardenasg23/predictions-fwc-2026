@@ -17,6 +17,12 @@ export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
 
   @UseGuards(JwtAuthGuard)
+  @Get('stages/status')
+  getStagesStatus() {
+    return this.matchesService.getStagesStatus();
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get()
   findAll(@Query('phase') phase?: string, @Query('stage') stage?: string) {
     return this.matchesService.findAll(phase, stage);

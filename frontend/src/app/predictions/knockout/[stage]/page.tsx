@@ -101,7 +101,7 @@ export default function KnockoutStagePage() {
   // Stage statuses for tab bar
   const { data: statuses } = useQuery<Record<MatchStage, KnockoutStageStatus>>({
     queryKey: ['stages-status'],
-    queryFn: () => api.get('/admin/stages/status').then((r) => r.data),
+    queryFn: () => api.get('/matches/stages/status').then((r) => r.data),
     staleTime: 30_000,
     enabled: !!token,
   });
