@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsOptional, IsString, ValidateNested, IsInt, Min } from 'class-validator';
+import { IsArray, IsString, ValidateNested, IsInt, Min } from 'class-validator';
 
 class PredictionItem {
   @IsString()
@@ -12,14 +12,6 @@ class PredictionItem {
   @IsInt()
   @Min(0)
   awayScore: number;
-
-  @IsOptional()
-  @IsString()
-  homeTeamPick?: string;
-
-  @IsOptional()
-  @IsString()
-  awayTeamPick?: string;
 }
 
 export class BulkPredictionsDto {

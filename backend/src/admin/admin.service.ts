@@ -5,10 +5,15 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { EmailService } from '../email/email.service.js';
 import { CreateMatchesBatchDto } from './dto/create-matches-batch.dto.js';
 
-const CONFIG_KEYS = {
-  knockoutActivated: 'knockout_activated',
-  knockoutReminderSent: 'knockout_reminder_sent',
-} as const;
+const KNOCKOUT_STAGES: MatchStage[] = ['R32', 'R16', 'QF', 'SF', 'THIRD_PLACE', 'FINAL'];
+
+function stageOpenKey(stage: MatchStage) {
+  return `knockout_${stage.toLowerCase()}_open`;
+}
+
+function stageReminderKey(stage: MatchStage) {
+  return `knockout_${stage.toLowerCase()}_reminder_sent`;
+}
 
 @Injectable()
 export class AdminService {
@@ -19,66 +24,84 @@ export class AdminService {
     private readonly email: EmailService,
   ) {}
 
-  async activateKnockout(): Promise<{ message: string; usersNotified: number }> {
-    const alreadyActivated = await this.getConfig(CONFIG_KEYS.knockoutActivated);
-    if (alreadyActivated === 'true') {
-      throw new BadRequestException('Knockout phase is already activated');
+  async activateStage(stage: MatchStage): Promise<{ message: string; usersNotified: number }> {
+    if (!KNOCKOUT_STAGES.includes(stage)) {
+      throw new BadRequestException(`Invalid knockout stage: ${stage}`);
     }
 
-    // Warn if R32 slots still have TBD teams, but don't block (admin controls order)
-    const tbdCount = await this.prisma.match.count({
-      where: { stage: MatchStage.R32, homeTeam: 'TBD' },
-    });
-    if (tbdCount > 0) {
-      this.logger.warn(`Activating knockout with ${tbdCount} R32 slots still TBD`);
+    const alreadyOpen = await this.getConfig(stageOpenKey(stage));
+    if (alreadyOpen === 'true') {
+      throw new BadRequestException(`Stage ${stage} is already activated`);
     }
 
-    const firstR32 = await this.prisma.match.findFirst({
-      where: { stage: MatchStage.R32, status: MatchStatus.SCHEDULED },
+    const firstMatch = await this.prisma.match.findFirst({
+      where: { stage, status: MatchStatus.SCHEDULED },
       orderBy: { scheduledAt: 'asc' },
     });
-    if (!firstR32) {
-      throw new BadRequestException('No scheduled R32 matches found in the database');
+    if (!firstMatch) {
+      throw new BadRequestException(
+        `No scheduled matches found for stage ${stage}. Create them first via POST /admin/matches/batch.`,
+      );
     }
 
     const users = await this.prisma.user.findMany({
       select: { email: true, name: true },
     });
 
-    await this.email.sendKnockoutActivation(users, firstR32.scheduledAt);
-    await this.setConfig(CONFIG_KEYS.knockoutActivated, 'true');
+    await this.email.sendStageActivation(stage, users, firstMatch.scheduledAt);
+    await this.setConfig(stageOpenKey(stage), 'true');
 
-    this.logger.log(`Knockout activated — notified ${users.length} users`);
-    return { message: 'Knockout phase activated', usersNotified: users.length };
+    this.logger.log(`Stage ${stage} activated — notified ${users.length} users`);
+    return { message: `Stage ${stage} activated`, usersNotified: users.length };
   }
 
-  // Runs daily at 12:00 UTC. Sends a 24h reminder once, the day before the first R32.
-  @Cron('0 12 * * *')
-  async sendKnockoutReminderIfDue(): Promise<void> {
-    const alreadySent = await this.getConfig(CONFIG_KEYS.knockoutReminderSent);
-    if (alreadySent === 'true') return;
+  async getStagesStatus(): Promise<Record<MatchStage, 'inactive' | 'open' | 'locked'>> {
+    const now = new Date();
+    const result = {} as Record<MatchStage, 'inactive' | 'open' | 'locked'>;
 
+    for (const stage of KNOCKOUT_STAGES) {
+      const isOpen = await this.getConfig(stageOpenKey(stage));
+      if (isOpen !== 'true') {
+        result[stage] = 'inactive';
+        continue;
+      }
+
+      const firstMatch = await this.prisma.match.findFirst({
+        where: { stage },
+        orderBy: { scheduledAt: 'asc' },
+        select: { scheduledAt: true },
+      });
+
+      result[stage] = firstMatch && firstMatch.scheduledAt <= now ? 'locked' : 'open';
+    }
+
+    return result;
+  }
+
+  // Runs daily at 12:00 UTC. Sends a 24h reminder for each activated stage approaching its deadline.
+  @Cron('0 12 * * *')
+  async sendStageRemindersIfDue(): Promise<void> {
     const now = new Date();
     const in25h = new Date(now.getTime() + 25 * 60 * 60 * 1000);
 
-    const firstR32 = await this.prisma.match.findFirst({
-      where: {
-        stage: MatchStage.R32,
-        status: MatchStatus.SCHEDULED,
-        scheduledAt: { lte: in25h },
-      },
-      orderBy: { scheduledAt: 'asc' },
-    });
+    for (const stage of KNOCKOUT_STAGES) {
+      const isOpen = await this.getConfig(stageOpenKey(stage));
+      if (isOpen !== 'true') continue;
 
-    if (!firstR32) return;
+      const reminderSent = await this.getConfig(stageReminderKey(stage));
+      if (reminderSent === 'true') continue;
 
-    this.logger.log('Sending 24h knockout reminder…');
-    const users = await this.prisma.user.findMany({
-      select: { email: true, name: true },
-    });
+      const firstMatch = await this.prisma.match.findFirst({
+        where: { stage, status: MatchStatus.SCHEDULED, scheduledAt: { lte: in25h } },
+        orderBy: { scheduledAt: 'asc' },
+      });
+      if (!firstMatch) continue;
 
-    await this.email.sendKnockoutReminder(users, firstR32.scheduledAt);
-    await this.setConfig(CONFIG_KEYS.knockoutReminderSent, 'true');
+      this.logger.log(`Sending 24h reminder for stage ${stage}…`);
+      const users = await this.prisma.user.findMany({ select: { email: true, name: true } });
+      await this.email.sendStageReminder(stage, users, firstMatch.scheduledAt);
+      await this.setConfig(stageReminderKey(stage), 'true');
+    }
   }
 
   async createMatchesBatch(dto: CreateMatchesBatchDto): Promise<{ created: number }> {
@@ -91,8 +114,6 @@ export class AdminService {
             scheduledAt: new Date(m.scheduledAt),
             stage: m.stage,
             phase: m.phase,
-            homeTeamOpts: m.homeTeamOpts ?? null,
-            awayTeamOpts: m.awayTeamOpts ?? null,
             matchOrder: m.matchOrder ?? null,
           },
         }),
@@ -107,16 +128,16 @@ export class AdminService {
     return { message: `Test email sent to ${to}` };
   }
 
-  async sendTestKnockoutActivation(to: string): Promise<{ message: string }> {
-    const deadline = new Date('2026-06-28T18:00:00.000Z');
-    await this.email.sendKnockoutActivation([{ email: to, name: 'Participante' }], deadline);
-    return { message: `Knockout activation email sent to ${to}` };
+  async sendTestStageActivation(to: string, stage: MatchStage): Promise<{ message: string }> {
+    const deadline = new Date('2026-07-04T18:00:00.000Z');
+    await this.email.sendStageActivation(stage, [{ email: to, name: 'Participante' }], deadline);
+    return { message: `Stage activation email (${stage}) sent to ${to}` };
   }
 
-  async sendTestKnockoutReminder(to: string): Promise<{ message: string }> {
-    const deadline = new Date('2026-06-28T18:00:00.000Z');
-    await this.email.sendKnockoutReminder([{ email: to, name: 'Participante' }], deadline);
-    return { message: `Knockout reminder email sent to ${to}` };
+  async sendTestStageReminder(to: string, stage: MatchStage): Promise<{ message: string }> {
+    const deadline = new Date('2026-07-04T18:00:00.000Z');
+    await this.email.sendStageReminder(stage, [{ email: to, name: 'Participante' }], deadline);
+    return { message: `Stage reminder email (${stage}) sent to ${to}` };
   }
 
   private async getConfig(key: string): Promise<string | null> {

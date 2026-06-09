@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MatchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { calculatePoints, calculateTeamBonus } from '../scoring/scoring.util.js';
+import { calculatePoints } from '../scoring/scoring.util.js';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -10,7 +10,6 @@ export interface LeaderboardEntry {
   totalPoints: number;
   exactPredictions: number;
   outcomePredictions: number;
-  teamBonusPredictions: number;
   totalPredictions: number;
 }
 
@@ -25,8 +24,6 @@ export class LeaderboardService {
           select: {
             homeScore: true,
             awayScore: true,
-            homeTeam: true,
-            awayTeam: true,
             stage: true,
             status: true,
           },
@@ -37,21 +34,14 @@ export class LeaderboardService {
 
     const statsMap = new Map<
       string,
-      { name: string; totalPoints: number; exact: number; outcome: number; teamBonus: number; total: number }
+      { name: string; totalPoints: number; exact: number; outcome: number; total: number }
     >();
 
     for (const pred of predictions) {
       const { match, user } = pred;
 
       if (!statsMap.has(user.id)) {
-        statsMap.set(user.id, {
-          name: user.name,
-          totalPoints: 0,
-          exact: 0,
-          outcome: 0,
-          teamBonus: 0,
-          total: 0,
-        });
+        statsMap.set(user.id, { name: user.name, totalPoints: 0, exact: 0, outcome: 0, total: 0 });
       }
 
       const entry = statsMap.get(user.id)!;
@@ -69,21 +59,15 @@ export class LeaderboardService {
         { homeScore: match.homeScore!, awayScore: match.awayScore!, stage: match.stage },
       );
 
-      const bonus = calculateTeamBonus(
-        { homeTeamPick: pred.homeTeamPick, awayTeamPick: pred.awayTeamPick },
-        { homeTeam: match.homeTeam, awayTeam: match.awayTeam, stage: match.stage },
-      );
-
       const isExact =
         pred.homeScore === match.homeScore && pred.awayScore === match.awayScore;
 
-      entry.totalPoints += pts + bonus;
+      entry.totalPoints += pts;
       if (isExact) entry.exact += 1;
       else if (pts > 0) entry.outcome += 1;
-      if (bonus > 0) entry.teamBonus += bonus;
     }
 
-    const sorted = [...statsMap.entries()]
+    return [...statsMap.entries()]
       .sort((a, b) =>
         b[1].totalPoints !== a[1].totalPoints
           ? b[1].totalPoints - a[1].totalPoints
@@ -96,10 +80,7 @@ export class LeaderboardService {
         totalPoints: s.totalPoints,
         exactPredictions: s.exact,
         outcomePredictions: s.outcome,
-        teamBonusPredictions: s.teamBonus,
         totalPredictions: s.total,
       }));
-
-    return sorted;
   }
 }

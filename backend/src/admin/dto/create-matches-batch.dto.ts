@@ -1,13 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsDateString,
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  ValidateNested,
-} from 'class-validator';
+import { IsArray, IsDateString, IsEnum, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { MatchPhase, MatchStage } from '@prisma/client';
 
 class CreateMatchItem {
@@ -25,14 +17,6 @@ class CreateMatchItem {
 
   @IsEnum(MatchPhase)
   phase: MatchPhase;
-
-  @IsOptional()
-  @IsString()
-  homeTeamOpts?: string;
-
-  @IsOptional()
-  @IsString()
-  awayTeamOpts?: string;
 
   @IsOptional()
   @IsInt()

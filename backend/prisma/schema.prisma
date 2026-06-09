@@ -58,8 +58,6 @@ model Match {
   phase         MatchPhase
   groupName     String?
   matchOrder    Int?
-  homeTeamOpts  String?
-  awayTeamOpts  String?
 
   predictions Prediction[]
 }
@@ -76,8 +74,6 @@ model Prediction {
   matchId       String
   homeScore     Int
   awayScore     Int
-  homeTeamPick  String?
-  awayTeamPick  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
