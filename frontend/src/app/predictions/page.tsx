@@ -9,6 +9,7 @@ import { Match, Prediction } from '@/lib/types';
 import { MatchCard } from '@/components/match-card';
 import { Target, Lock, Trash2, ShieldCheck, X, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { PredictionsPhaseNav } from '@/components/predictions-phase-nav';
 
 function SkeletonCard() {
   return (
@@ -218,6 +219,11 @@ export default function PredictionsPage() {
       />
 
       <div className="mx-auto max-w-3xl px-4 py-8">
+        {/* Phase tab navigation */}
+        <div className="mb-6">
+          <PredictionsPhaseNav current="GROUP" />
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-start justify-between gap-4 flex-wrap">

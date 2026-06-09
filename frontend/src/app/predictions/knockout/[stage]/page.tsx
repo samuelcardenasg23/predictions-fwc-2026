@@ -1,25 +1,25 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { Match, MatchStage, KnockoutStageStatus, Prediction } from '@/lib/types';
 import { MatchCard } from '@/components/match-card';
-import { Lock, Zap } from 'lucide-react';
+import { PredictionsPhaseNav } from '@/components/predictions-phase-nav';
+import { Lock, Zap, Target, Trash2, X, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ─── constants ───────────────────────────────────────────────────────────────
-
-const KNOCKOUT_STAGES: MatchStage[] = ['R32', 'R16', 'QF', 'SF', 'THIRD_PLACE', 'FINAL'];
 
 const STAGE_LABELS: Record<MatchStage, string> = {
   GROUP: 'Grupos',
   R32: 'Fase de 32',
-  R16: 'Octavos',
-  QF: 'Cuartos',
-  SF: 'Semis',
-  THIRD_PLACE: '3er Lugar',
+  R16: 'Octavos de final',
+  QF: 'Cuartos de final',
+  SF: 'Semifinales',
+  THIRD_PLACE: 'Tercer lugar',
   FINAL: 'Final',
 };
 
@@ -32,60 +32,65 @@ const SLUG_TO_STAGE: Record<string, MatchStage> = {
   final: 'FINAL',
 };
 
-const STAGE_TO_SLUG: Record<MatchStage, string> = {
-  GROUP: '',
-  R32: 'r32',
-  R16: 'r16',
-  QF: 'qf',
-  SF: 'sf',
-  THIRD_PLACE: 'third-place',
-  FINAL: 'final',
-};
+// ─── confirm modal ────────────────────────────────────────────────────────────
 
-// ─── tab bar ─────────────────────────────────────────────────────────────────
-
-function StageTabs({
-  current,
-  statuses,
+function ConfirmClearModal({
+  open,
+  onClose,
+  onConfirm,
+  loading,
+  stageName,
 }: {
-  current: MatchStage;
-  statuses: Record<MatchStage, KnockoutStageStatus>;
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  loading: boolean;
+  stageName: string;
 }) {
-  const router = useRouter();
+  if (!open) return null;
 
   return (
-    <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-800/60 bg-slate-900/40 p-1">
-      {KNOCKOUT_STAGES.map((stage) => {
-        const status = statuses[stage];
-        const isActive = stage === current;
-        const isInactive = status === 'inactive';
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-lg p-1 text-slate-500 hover:text-slate-300 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
 
-        let tabCls =
-          'flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ';
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border bg-red-500/10 border-red-500/20">
+            <AlertTriangle className="h-5 w-5 text-red-400" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-100">Borrar pronósticos</h3>
+            <p className="text-xs text-slate-500">Esta acción es irreversible</p>
+          </div>
+        </div>
 
-        if (isActive) {
-          tabCls += 'bg-amber-500 text-black';
-        } else if (isInactive) {
-          tabCls += 'cursor-not-allowed text-slate-600';
-        } else {
-          tabCls += 'cursor-pointer text-slate-400 hover:text-slate-200 hover:bg-slate-800';
-        }
+        <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+          Se eliminarán todos tus pronósticos de <span className="font-semibold text-slate-200">{stageName}</span>. Tendrás que volver a ingresarlos antes de que arranquen los partidos.
+        </p>
 
-        const indicator =
-          status === 'open' ? ' 🟢' : status === 'locked' ? ' 🔒' : '';
-
-        return (
+        <div className="flex gap-3">
           <button
-            key={stage}
-            className={tabCls}
-            disabled={isInactive}
-            onClick={() => !isInactive && router.push(`/predictions/knockout/${STAGE_TO_SLUG[stage]}`)}
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm font-medium text-slate-400 hover:border-slate-600 hover:text-slate-200 transition-colors disabled:opacity-50"
           >
-            {STAGE_LABELS[stage]}
-            {indicator}
+            Cancelar
           </button>
-        );
-      })}
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-bold text-white hover:bg-red-400 transition-all disabled:opacity-50"
+          >
+            {loading ? 'Borrando...' : 'Sí, borrar todo'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -94,15 +99,22 @@ function StageTabs({
 
 export default function KnockoutStagePage() {
   const { user, token } = useAuth();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const params = useParams<{ stage: string }>();
   const slug = params.stage ?? 'r32';
   const stage = SLUG_TO_STAGE[slug];
 
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearLoading, setClearLoading] = useState(false);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [clearTrigger, setClearTrigger] = useState(0);
+
   // Stage statuses for tab bar
   const { data: statuses } = useQuery<Record<MatchStage, KnockoutStageStatus>>({
     queryKey: ['stages-status'],
-    queryFn: () => api.get('/matches/stages/status').then((r) => r.data),
     staleTime: 30_000,
+    queryFn: () => api.get('/matches/stages/status').then((r) => r.data),
     enabled: !!token,
   });
 
@@ -135,8 +147,27 @@ export default function KnockoutStagePage() {
   const isLocked = stageStatus === 'locked';
   const isInactive = !stage || stageStatus === 'inactive' || stageStatus === undefined;
 
-  const completed = allMatches.filter((m) => predMap.has(m.id)).length;
   const total = allMatches.length;
+  const saved = allMatches.filter((m) => predMap.has(m.id)).length + savedIds.size;
+  const progress = total > 0 ? Math.min(100, Math.round((saved / total) * 100)) : 0;
+
+  const handleClear = async () => {
+    setClearLoading(true);
+    try {
+      await api.delete(`/predictions/me/stage/${stage}`);
+      setSavedIds(new Set());
+      setClearTrigger((t) => t + 1);
+      queryClient.setQueryData(['predictions', user?.id], (prev: Prediction[] = []) =>
+        prev.filter((p) => !allMatches.some((m) => m.id === p.matchId)),
+      );
+      setShowClearModal(false);
+      toast.success('Pronósticos eliminados. Puedes volver a empezar.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? 'Error al eliminar');
+    } finally {
+      setClearLoading(false);
+    }
+  };
 
   if (!stage) {
     return (
@@ -146,86 +177,137 @@ export default function KnockoutStagePage() {
     );
   }
 
-  const defaultStatuses = Object.fromEntries(
-    KNOCKOUT_STAGES.map((s) => [s, 'inactive' as KnockoutStageStatus]),
-  ) as Record<MatchStage, KnockoutStageStatus>;
-
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-      {/* Tab bar */}
-      <StageTabs current={stage} statuses={statuses ?? defaultStatuses} />
+    <>
+      <ConfirmClearModal
+        open={showClearModal}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={handleClear}
+        loading={clearLoading}
+        stageName={STAGE_LABELS[stage]}
+      />
 
-      {/* Stage title */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-100">
-          {STAGE_LABELS[stage]}
-        </h1>
+      <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+        {/* Phase tab navigation */}
+        <PredictionsPhaseNav current={stage} />
+
+        {/* Header */}
+        <div className="mb-2">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-amber-500 mb-1">
+                Fase eliminatoria
+              </p>
+              <h1 className="text-2xl font-black text-slate-100">{STAGE_LABELS[stage]}</h1>
+              <p className="text-sm text-slate-500 mt-1">
+                {isLocked
+                  ? 'Los partidos ya arrancaron — pronósticos cerrados.'
+                  : isInactive
+                  ? 'Esta fase aún no está activada.'
+                  : 'Se guardan automáticamente · Cierre antes de cada partido'}
+              </p>
+            </div>
+
+            {/* Progress */}
+            {!isInactive && total > 0 && (
+              <div className="shrink-0 rounded-xl border border-slate-800/60 bg-slate-900/50 p-3 text-right min-w-[110px]">
+                <div className="flex items-center justify-end gap-1.5 mb-2">
+                  <Target className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="text-xs font-bold text-amber-400">{progress}%</span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-600 mt-1.5">{saved}/{total} guardados</p>
+              </div>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          {!isInactive && !isLocked && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowClearModal(true)}
+                disabled={saved === 0}
+                className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 hover:border-red-500/40 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+                Borrar todo
+              </button>
+            </div>
+          )}
+
+          {/* Lock banner */}
+          {isLocked && (
+            <div className="mt-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
+              <Lock className="h-4 w-4 shrink-0" />
+              Los pronósticos de esta fase están cerrados — ya arrancaron los partidos.
+            </div>
+          )}
+        </div>
+
+        {/* Inactive state */}
+        {isInactive && (
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-800/60 bg-slate-900/30 px-6 py-10 text-center">
+            <Zap className="h-8 w-8 text-slate-500" />
+            <p className="text-slate-400">
+              Esta fase aún no está activada. El admin la abrirá cuando estén definidos los equipos.
+            </p>
+          </div>
+        )}
+
+        {/* Loading skeletons */}
+        {!isInactive && loadingMatches && (
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="h-16 rounded-xl border border-slate-800/60 bg-slate-900/30 animate-pulse"
+              />
+            ))}
+          </div>
+        )}
+
+        {/* No matches yet */}
+        {!isInactive && !loadingMatches && total === 0 && (
+          <div className="rounded-xl border border-slate-800/60 bg-slate-900/30 px-6 py-8 text-center text-sm text-slate-400">
+            Partidos pendientes de confirmación.
+          </div>
+        )}
+
+        {/* Match cards */}
         {!isInactive && !loadingMatches && total > 0 && (
-          <p className="mt-0.5 text-sm text-slate-400">
-            {completed}/{total} pronosticados
-          </p>
+          <div className="space-y-3">
+            {allMatches.map((match) => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                prediction={predMap.get(match.id)}
+                globalLocked={isLocked}
+                clearTrigger={clearTrigger}
+                onSaved={(id) => setSavedIds((s) => new Set(s).add(id))}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Bottom borrar todo (convenience after scrolling) */}
+        {!isInactive && !isLocked && total > 0 && (
+          <div className="border-t border-slate-800/60 pt-6 flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowClearModal(true)}
+              disabled={saved === 0}
+              className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 hover:border-red-500/40 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+              Borrar todo
+            </button>
+          </div>
         )}
       </div>
-
-      {/* Progress bar */}
-      {!isInactive && !loadingMatches && total > 0 && (
-        <div className="h-1.5 w-full rounded-full bg-slate-800">
-          <div
-            className="h-full rounded-full bg-amber-500 transition-all"
-            style={{ width: `${(completed / total) * 100}%` }}
-          />
-        </div>
-      )}
-
-      {/* Status banners */}
-      {isInactive && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-800/60 bg-slate-900/30 px-6 py-10 text-center">
-          <Zap className="h-8 w-8 text-slate-500" />
-          <p className="text-slate-400">
-            Esta fase aún no está activada. El admin la abrirá cuando estén definidos los equipos.
-          </p>
-        </div>
-      )}
-
-      {isLocked && (
-        <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
-          <Lock className="h-4 w-4 shrink-0" />
-          Los pronósticos de esta fase están cerrados — ya arrancaron los partidos.
-        </div>
-      )}
-
-      {/* Loading skeletons */}
-      {!isInactive && loadingMatches && (
-        <div className="space-y-3">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="h-16 rounded-xl border border-slate-800/60 bg-slate-900/30 animate-pulse"
-            />
-          ))}
-        </div>
-      )}
-
-      {/* No matches yet (stage activated but admin hasn't created matches) */}
-      {!isInactive && !loadingMatches && total === 0 && (
-        <div className="rounded-xl border border-slate-800/60 bg-slate-900/30 px-6 py-8 text-center text-sm text-slate-400">
-          Partidos pendientes de confirmación.
-        </div>
-      )}
-
-      {/* Match cards */}
-      {!isInactive && !loadingMatches && total > 0 && (
-        <div className="space-y-3">
-          {allMatches.map((match) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              prediction={predMap.get(match.id)}
-              globalLocked={isLocked}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    </>
   );
 }

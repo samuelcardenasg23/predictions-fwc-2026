@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards, HttpCode } from '@nestjs/common';
 import { PredictionsService } from './predictions.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { PlayerOnlyGuard } from '../auth/guards/player-only.guard.js';
@@ -31,6 +31,13 @@ export class PredictionsController {
   @Delete('me')
   deleteAll(@Req() req: AuthenticatedRequest) {
     return this.predictionsService.deleteAll(req.user.id);
+  }
+
+  @UseGuards(PlayerOnlyGuard)
+  @HttpCode(200)
+  @Delete('me/stage/:stage')
+  deleteByStage(@Req() req: AuthenticatedRequest, @Param('stage') stage: string) {
+    return this.predictionsService.deleteByStage(req.user.id, stage as any);
   }
 
   @UseGuards(PlayerOnlyGuard)

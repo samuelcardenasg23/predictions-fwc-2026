@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MatchPhase } from '@prisma/client';
+import { MatchPhase, MatchStage } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UpsertPredictionDto } from './dto/upsert-prediction.dto.js';
 import { BulkPredictionsDto } from './dto/bulk-predictions.dto.js';
@@ -133,6 +133,27 @@ export class PredictionsService {
     }
 
     const { count } = await this.prisma.prediction.deleteMany({ where: { userId } });
+    return { deleted: count };
+  }
+
+  async deleteByStage(userId: string, stage: MatchStage) {
+    const firstMatch = await this.prisma.match.findFirst({
+      where: { stage },
+      orderBy: { scheduledAt: 'asc' },
+      select: { scheduledAt: true },
+    });
+
+    if (firstMatch && firstMatch.scheduledAt <= new Date()) {
+      throw new ForbiddenException('Cannot delete predictions — this stage has already started');
+    }
+
+    const matchIds = await this.prisma.match
+      .findMany({ where: { stage }, select: { id: true } })
+      .then((ms) => ms.map((m) => m.id));
+
+    const { count } = await this.prisma.prediction.deleteMany({
+      where: { userId, matchId: { in: matchIds } },
+    });
     return { deleted: count };
   }
 
