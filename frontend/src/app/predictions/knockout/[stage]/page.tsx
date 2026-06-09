@@ -233,7 +233,7 @@ export default function KnockoutStagePage() {
         stageName={STAGE_LABELS[stage]}
       />
 
-      <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
         {/* Phase tab navigation */}
         <PredictionsPhaseNav current={stage} />
 

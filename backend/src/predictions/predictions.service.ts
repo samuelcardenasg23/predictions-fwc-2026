@@ -170,12 +170,15 @@ export class PredictionsService {
       throw new BadRequestException('Cannot finalize — this stage has already started');
     }
 
-    // Require at least one prediction for this stage
-    const predCount = await this.prisma.prediction.count({
-      where: { userId, match: { stage } },
-    });
-    if (predCount === 0) {
-      throw new BadRequestException('Debes ingresar al menos un pronóstico antes de finalizar');
+    // Require ALL matches for this stage to have a prediction
+    const [totalStageMatches, predCount] = await Promise.all([
+      this.prisma.match.count({ where: { stage } }),
+      this.prisma.prediction.count({ where: { userId, match: { stage } } }),
+    ]);
+    if (predCount < totalStageMatches) {
+      throw new BadRequestException(
+        `Debes completar los ${totalStageMatches} pronósticos de esta fase antes de finalizar (llevas ${predCount})`,
+      );
     }
 
     return this.prisma.userStageLock.create({ data: { userId, stage } });
