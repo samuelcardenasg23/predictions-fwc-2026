@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { EmailService } from '../email/email.service.js';
 import { CreateMatchesBatchDto } from './dto/create-matches-batch.dto.js';
 import { CreateMatchDto } from './dto/create-match.dto.js';
+import { UpdateMatchTeamsDto } from './dto/update-match-teams.dto.js';
 
 const KNOCKOUT_STAGES: MatchStage[] = ['R32', 'R16', 'QF', 'SF', 'THIRD_PLACE', 'FINAL'];
 
@@ -137,6 +138,24 @@ export class AdminService {
     });
     this.logger.log(`Created match ${match.id}: ${match.homeTeam} vs ${match.awayTeam}`);
     return match;
+  }
+
+  async updateMatchTeams(id: string, dto: UpdateMatchTeamsDto) {
+    const match = await this.prisma.match.findUnique({ where: { id } });
+    if (!match) throw new NotFoundException('Partido no encontrado');
+    if (match.status === MatchStatus.FINISHED) {
+      throw new BadRequestException('No se puede modificar un partido finalizado');
+    }
+    const updated = await this.prisma.match.update({
+      where: { id },
+      data: {
+        ...(dto.homeTeam ? { homeTeam: dto.homeTeam } : {}),
+        ...(dto.awayTeam ? { awayTeam: dto.awayTeam } : {}),
+        ...(dto.scheduledAt ? { scheduledAt: new Date(dto.scheduledAt) } : {}),
+      },
+    });
+    this.logger.log(`Updated match ${id}: ${updated.homeTeam} vs ${updated.awayTeam}`);
+    return updated;
   }
 
   async deleteMatch(id: string) {

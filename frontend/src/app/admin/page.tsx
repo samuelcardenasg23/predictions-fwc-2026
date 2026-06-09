@@ -9,7 +9,8 @@ import { Match, MatchStage, MatchStatus, KnockoutStageStatus } from '@/lib/types
 import { Flag } from '@/components/flag';
 import { TeamCombobox } from '@/components/team-combobox';
 import { toast } from 'sonner';
-import { Plus, Trash2, Zap, ShieldCheck, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Fragment } from 'react';
+import { Plus, Pencil, Trash2, Zap, ShieldCheck, Lock, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -179,6 +180,9 @@ function StageSection({
   const [saving, setSaving] = useState(false);
   const [activating, setActivating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ homeTeam: string; awayTeam: string }>({ homeTeam: '', awayTeam: '' });
+  const [editSaving, setEditSaving] = useState(false);
 
   async function addMatch() {
     if (!form.homeTeam || !form.awayTeam || !form.scheduledAt) {
@@ -207,6 +211,36 @@ function StageSection({
       toast.error(err.response?.data?.message ?? 'Error al crear el partido');
     } finally {
       setSaving(false);
+    }
+  }
+
+  function startEdit(match: Match) {
+    setEditingId(match.id);
+    setEditForm({
+      homeTeam: match.homeTeam === 'TBD' ? '' : match.homeTeam,
+      awayTeam: match.awayTeam === 'TBD' ? '' : match.awayTeam,
+    });
+  }
+
+  async function saveEdit(matchId: string) {
+    if (!editForm.homeTeam || !editForm.awayTeam) {
+      toast.error('Selecciona ambos equipos');
+      return;
+    }
+    if (editForm.homeTeam === editForm.awayTeam) {
+      toast.error('Los equipos no pueden ser iguales');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      await api.patch(`/admin/matches/${matchId}`, editForm);
+      toast.success(`Actualizado: ${editForm.homeTeam} vs ${editForm.awayTeam}`);
+      setEditingId(null);
+      onInvalidate();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? 'Error al actualizar');
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -366,39 +400,88 @@ function StageSection({
                   const dateStr = new Date(match.scheduledAt).toLocaleString('es-MX', {
                     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                   });
+                  const isTBD = match.homeTeam === 'TBD' || match.awayTeam === 'TBD';
+                  const isEditing = editingId === match.id;
                   return (
-                    <div
-                      key={match.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/40 px-4 py-3"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {match.matchOrder && (
-                          <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded bg-slate-800 text-[10px] font-bold text-slate-400">
-                            {match.matchOrder}
-                          </span>
-                        )}
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Flag country={match.homeTeam} size={24} />
-                          <span className="text-sm font-medium text-slate-200 truncate">{match.homeTeam}</span>
-                          <span className="text-xs text-slate-600">vs</span>
-                          <span className="text-sm font-medium text-slate-200 truncate">{match.awayTeam}</span>
-                          <Flag country={match.awayTeam} size={24} />
+                    <Fragment key={match.id}>
+                      <div className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 transition-colors ${isEditing ? 'border-amber-500/40 bg-amber-500/5' : 'border-slate-800 bg-slate-900/40'}`}>
+                        <div className="flex items-center gap-3 min-w-0">
+                          {match.matchOrder && (
+                            <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded bg-slate-800 text-[10px] font-bold text-slate-400">
+                              {match.matchOrder}
+                            </span>
+                          )}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Flag country={match.homeTeam} size={24} />
+                            <span className={`text-sm font-medium truncate ${isTBD ? 'text-slate-500 italic' : 'text-slate-200'}`}>{match.homeTeam}</span>
+                            <span className="text-xs text-slate-600">vs</span>
+                            <span className={`text-sm font-medium truncate ${isTBD ? 'text-slate-500 italic' : 'text-slate-200'}`}>{match.awayTeam}</span>
+                            <Flag country={match.awayTeam} size={24} />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-slate-500 hidden sm:block">{dateStr}</span>
+                          {match.status !== 'FINISHED' && (
+                            <button
+                              onClick={() => isEditing ? setEditingId(null) : startEdit(match)}
+                              className={`rounded-lg border p-1.5 transition-colors ${isEditing ? 'border-amber-500/40 text-amber-400 hover:bg-amber-500/10' : 'border-slate-700 text-slate-500 hover:border-amber-500/40 hover:text-amber-400'}`}
+                              title={isEditing ? 'Cancelar edición' : 'Editar equipos'}
+                            >
+                              {isEditing ? <X className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+                            </button>
+                          )}
+                          {!kickoffPassed && status !== 'locked' && !isEditing && (
+                            <button
+                              onClick={() => deleteMatch(match.id, match.homeTeam, match.awayTeam)}
+                              disabled={deletingId === match.id}
+                              className="rounded-lg border border-slate-700 p-1.5 text-slate-500 hover:border-red-500/40 hover:text-red-400 disabled:opacity-50 transition-colors"
+                              title="Eliminar partido"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-xs text-slate-500 hidden sm:block">{dateStr}</span>
-                        {!kickoffPassed && status !== 'locked' && (
-                          <button
-                            onClick={() => deleteMatch(match.id, match.homeTeam, match.awayTeam)}
-                            disabled={deletingId === match.id}
-                            className="rounded-lg border border-slate-700 p-1.5 text-slate-500 hover:border-red-500/40 hover:text-red-400 disabled:opacity-50 transition-colors"
-                            title="Eliminar partido"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                      {isEditing && (
+                        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 space-y-3 -mt-1">
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-400">Editar equipos — Partido {match.matchOrder ?? match.id.slice(0, 6)}</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Local</label>
+                              <TeamCombobox
+                                value={editForm.homeTeam}
+                                onChange={(v) => setEditForm((f) => ({ ...f, homeTeam: v }))}
+                                placeholder="Equipo local"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Visitante</label>
+                              <TeamCombobox
+                                value={editForm.awayTeam}
+                                onChange={(v) => setEditForm((f) => ({ ...f, awayTeam: v }))}
+                                placeholder="Equipo visitante"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={() => saveEdit(match.id)}
+                              disabled={editSaving}
+                              className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-50 transition-all"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              {editSaving ? 'Guardando…' : 'Guardar'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </Fragment>
                   );
                 })}
             </div>

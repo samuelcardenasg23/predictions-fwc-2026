@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { MatchStage } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { AdminGuard } from '../auth/guards/admin.guard.js';
 import { AdminService } from './admin.service.js';
 import { CreateMatchesBatchDto } from './dto/create-matches-batch.dto.js';
 import { CreateMatchDto } from './dto/create-match.dto.js';
+import { UpdateMatchTeamsDto } from './dto/update-match-teams.dto.js';
 
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin')
@@ -21,6 +22,12 @@ export class AdminController {
   @HttpCode(HttpStatus.CREATED)
   createMatch(@Body() dto: CreateMatchDto) {
     return this.adminService.createMatch(dto);
+  }
+
+  @Patch('matches/:id')
+  @HttpCode(HttpStatus.OK)
+  updateMatchTeams(@Param('id') id: string, @Body() dto: UpdateMatchTeamsDto) {
+    return this.adminService.updateMatchTeams(id, dto);
   }
 
   @Delete('matches/:id')
