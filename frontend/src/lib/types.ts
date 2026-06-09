@@ -2,6 +2,7 @@ export type Role = 'USER' | 'ADMIN';
 export type MatchStatus = 'SCHEDULED' | 'LIVE' | 'FINISHED';
 export type MatchStage = 'GROUP' | 'R32' | 'R16' | 'QF' | 'SF' | 'THIRD_PLACE' | 'FINAL';
 export type MatchPhase = 'GROUP_STAGE' | 'KNOCKOUT';
+export type KnockoutStageStatus = 'inactive' | 'open' | 'locked';
 
 export interface User {
   id: string;
@@ -32,6 +33,13 @@ export interface Prediction {
   homeScore: number;
   awayScore: number;
   match?: Match;
+}
+
+export interface UserStageLock {
+  id: string;
+  userId: string;
+  stage: MatchStage;
+  lockedAt: string;
 }
 
 export interface LeaderboardEntry {

@@ -42,22 +42,23 @@ model User {
   createdAt             DateTime  @default(now())
   groupStageLockedAt    DateTime?
 
-  predictions Prediction[]
+  predictions  Prediction[]
+  stageLocks   UserStageLock[]
 }
 
 model Match {
-  id          String      @id @default(cuid())
-  externalId  Int?        @unique
-  homeTeam    String
-  awayTeam    String
-  scheduledAt DateTime
-  homeScore   Int?
-  awayScore   Int?
-  status      MatchStatus @default(SCHEDULED)
-  stage       MatchStage
-  phase       MatchPhase
-  groupName   String?
-  matchOrder  Int?
+  id            String      @id @default(cuid())
+  externalId    Int?        @unique
+  homeTeam      String
+  awayTeam      String
+  scheduledAt   DateTime
+  homeScore     Int?
+  awayScore     Int?
+  status        MatchStatus @default(SCHEDULED)
+  stage         MatchStage
+  phase         MatchPhase
+  groupName     String?
+  matchOrder    Int?
 
   predictions Prediction[]
 }
@@ -68,14 +69,25 @@ model SystemConfig {
   updatedAt DateTime @updatedAt
 }
 
+model UserStageLock {
+  id       String     @id @default(cuid())
+  userId   String
+  stage    MatchStage
+  lockedAt DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, stage])
+}
+
 model Prediction {
-  id        String   @id @default(cuid())
-  userId    String
-  matchId   String
-  homeScore Int
-  awayScore Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  userId        String
+  matchId       String
+  homeScore     Int
+  awayScore     Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   user  User  @relation(fields: [userId], references: [id])
   match Match @relation(fields: [matchId], references: [id])

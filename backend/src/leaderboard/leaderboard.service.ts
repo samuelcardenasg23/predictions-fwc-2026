@@ -18,8 +18,6 @@ export class LeaderboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
-    // Include ALL predictions — we'll compute points only for played matches
-    // so every user with at least one prediction appears in the table from day 1
     const predictions = await this.prisma.prediction.findMany({
       include: {
         match: {
@@ -43,19 +41,12 @@ export class LeaderboardService {
       const { match, user } = pred;
 
       if (!statsMap.has(user.id)) {
-        statsMap.set(user.id, {
-          name: user.name,
-          totalPoints: 0,
-          exact: 0,
-          outcome: 0,
-          total: 0,
-        });
+        statsMap.set(user.id, { name: user.name, totalPoints: 0, exact: 0, outcome: 0, total: 0 });
       }
 
       const entry = statsMap.get(user.id)!;
       entry.total += 1;
 
-      // Only score predictions for matches that have been played
       const isPlayed =
         (match.status === MatchStatus.LIVE || match.status === MatchStatus.FINISHED) &&
         match.homeScore !== null &&
@@ -76,8 +67,7 @@ export class LeaderboardService {
       else if (pts > 0) entry.outcome += 1;
     }
 
-    // Sort by totalPoints desc, then by total predictions desc (more active players rank higher on tie)
-    const sorted = [...statsMap.entries()]
+    return [...statsMap.entries()]
       .sort((a, b) =>
         b[1].totalPoints !== a[1].totalPoints
           ? b[1].totalPoints - a[1].totalPoints
@@ -92,7 +82,5 @@ export class LeaderboardService {
         outcomePredictions: s.outcome,
         totalPredictions: s.total,
       }));
-
-    return sorted;
   }
 }

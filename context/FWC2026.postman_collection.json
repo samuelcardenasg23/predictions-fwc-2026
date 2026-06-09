@@ -4,26 +4,10 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3001/api",
-      "type": "string"
-    },
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "match_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "user_id",
-      "value": "",
-      "type": "string"
-    }
+    { "key": "base_url", "value": "http://localhost:3001/api", "type": "string" },
+    { "key": "token",    "value": "", "type": "string" },
+    { "key": "match_id", "value": "", "type": "string" },
+    { "key": "user_id",  "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -34,51 +18,35 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"usuario@example.com\",\n  \"name\": \"Nombre Apellido\",\n  \"password\": \"password123\"\n}"
-            }
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"usuario@example.com\",\n  \"name\": \"Nombre Apellido\",\n  \"password\": \"password123\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": {
-              "exec": [
-                "const res = pm.response.json();",
-                "if (res.access_token) pm.collectionVariables.set('token', res.access_token);",
-                "if (res.user?.id) pm.collectionVariables.set('user_id', res.user.id);"
-              ]
-            }
-          }]
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const res = pm.response.json();",
+            "if (res.access_token) pm.collectionVariables.set('token', res.access_token);",
+            "if (res.user?.id) pm.collectionVariables.set('user_id', res.user.id);"
+          ]}}]
         },
         {
           "name": "Login",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"usuario@example.com\",\n  \"password\": \"password123\"\n}"
-            }
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth","login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"usuario@example.com\",\n  \"password\": \"password123\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": {
-              "exec": [
-                "const res = pm.response.json();",
-                "if (res.access_token) pm.collectionVariables.set('token', res.access_token);",
-                "if (res.user?.id) pm.collectionVariables.set('user_id', res.user.id);"
-              ]
-            }
-          }]
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const res = pm.response.json();",
+            "if (res.access_token) pm.collectionVariables.set('token', res.access_token);",
+            "if (res.user?.id) pm.collectionVariables.set('user_id', res.user.id);"
+          ]}}]
         },
         {
           "name": "Me (perfil autenticado)",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth","me"] }
           }
         }
       ]
@@ -91,21 +59,12 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{base_url}}/matches",
-              "host": ["{{base_url}}"],
-              "path": ["matches"]
-            }
+            "url": { "raw": "{{base_url}}/matches", "host": ["{{base_url}}"], "path": ["matches"] }
           },
-          "event": [{
-            "listen": "test",
-            "script": {
-              "exec": [
-                "const res = pm.response.json();",
-                "if (Array.isArray(res) && res.length > 0) pm.collectionVariables.set('match_id', res[0].id);"
-              ]
-            }
-          }]
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const res = pm.response.json();",
+            "if (Array.isArray(res) && res.length > 0) pm.collectionVariables.set('match_id', res[0].id);"
+          ]}}]
         },
         {
           "name": "GET Group Stage Matches",
@@ -114,8 +73,7 @@
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{base_url}}/matches?phase=GROUP_STAGE",
-              "host": ["{{base_url}}"],
-              "path": ["matches"],
+              "host": ["{{base_url}}"], "path": ["matches"],
               "query": [{ "key": "phase", "value": "GROUP_STAGE" }]
             }
           }
@@ -127,10 +85,17 @@
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
             "url": {
               "raw": "{{base_url}}/matches?phase=KNOCKOUT",
-              "host": ["{{base_url}}"],
-              "path": ["matches"],
+              "host": ["{{base_url}}"], "path": ["matches"],
               "query": [{ "key": "phase", "value": "KNOCKOUT" }]
             }
+          }
+        },
+        {
+          "name": "GET Stages Status (usuario regular)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/matches/stages/status", "host": ["{{base_url}}"], "path": ["matches","stages","status"] }
           }
         },
         {
@@ -138,54 +103,36 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{base_url}}/matches/{{match_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["matches", "{{match_id}}"]
-            }
+            "url": { "raw": "{{base_url}}/matches/{{match_id}}", "host": ["{{base_url}}"], "path": ["matches","{{match_id}}"] }
           }
         },
         {
-          "name": "PATCH Match (admin — update knockout slot)",
+          "name": "PATCH Match (admin — update score / teams)",
           "request": {
             "method": "PATCH",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{base_url}}/matches/{{match_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["matches", "{{match_id}}"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"homeTeam\": \"Argentina\",\n  \"awayTeam\": \"France\",\n  \"scheduledAt\": \"2026-07-02T21:00:00.000Z\"\n}"
-            }
+            "url": { "raw": "{{base_url}}/matches/{{match_id}}", "host": ["{{base_url}}"], "path": ["matches","{{match_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"homeTeam\": \"Argentina\",\n  \"awayTeam\": \"France\",\n  \"homeScore\": 2,\n  \"awayScore\": 1,\n  \"status\": \"FINISHED\"\n}" }
           }
         }
       ]
     },
     {
-      "name": "Predictions",
+      "name": "Predictions — Grupos",
       "item": [
         {
-          "name": "PUT Single Prediction (auto-save)",
+          "name": "PUT Single Prediction",
           "request": {
             "method": "PUT",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{base_url}}/predictions/{{match_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["predictions", "{{match_id}}"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"homeScore\": 2,\n  \"awayScore\": 1\n}"
-            }
+            "url": { "raw": "{{base_url}}/predictions/{{match_id}}", "host": ["{{base_url}}"], "path": ["predictions","{{match_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"homeScore\": 2,\n  \"awayScore\": 1\n}" }
           }
         },
         {
@@ -196,15 +143,24 @@
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{base_url}}/predictions/bulk",
-              "host": ["{{base_url}}"],
-              "path": ["predictions", "bulk"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"predictions\": [\n    { \"matchId\": \"<match_id_1>\", \"homeScore\": 2, \"awayScore\": 0 },\n    { \"matchId\": \"<match_id_2>\", \"homeScore\": 1, \"awayScore\": 1 },\n    { \"matchId\": \"<match_id_3>\", \"homeScore\": 0, \"awayScore\": 2 }\n  ]\n}"
-            }
+            "url": { "raw": "{{base_url}}/predictions/bulk", "host": ["{{base_url}}"], "path": ["predictions","bulk"] },
+            "body": { "mode": "raw", "raw": "{\n  \"predictions\": [\n    { \"matchId\": \"<match_id_1>\", \"homeScore\": 2, \"awayScore\": 0 },\n    { \"matchId\": \"<match_id_2>\", \"homeScore\": 1, \"awayScore\": 1 }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "POST Lock Group Stage (finalizar)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/lock-group-stage", "host": ["{{base_url}}"], "path": ["predictions","lock-group-stage"] }
+          }
+        },
+        {
+          "name": "DELETE All My Predictions",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/me", "host": ["{{base_url}}"], "path": ["predictions","me"] }
           }
         },
         {
@@ -212,11 +168,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{base_url}}/predictions/me",
-              "host": ["{{base_url}}"],
-              "path": ["predictions", "me"]
-            }
+            "url": { "raw": "{{base_url}}/predictions/me", "host": ["{{base_url}}"], "path": ["predictions","me"] }
           }
         },
         {
@@ -224,85 +176,199 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{base_url}}/predictions/user/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["predictions", "user", "{{user_id}}"]
-            }
+            "url": { "raw": "{{base_url}}/predictions/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["predictions","user","{{user_id}}"] }
           }
         }
       ]
     },
     {
-      "name": "Admin",
+      "name": "Predictions — Knockout",
       "item": [
         {
-          "name": "POST Activate Knockout Phase",
+          "name": "PUT Single Prediction (knockout)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/predictions/{{match_id}}", "host": ["{{base_url}}"], "path": ["predictions","{{match_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"homeScore\": 1,\n  \"awayScore\": 0\n}" }
+          }
+        },
+        {
+          "name": "POST Lock Knockout Stage (finalizar fase)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{base_url}}/admin/activate-knockout",
-              "host": ["{{base_url}}"],
-              "path": ["admin", "activate-knockout"]
-            }
+            "url": { "raw": "{{base_url}}/predictions/lock-stage/R32", "host": ["{{base_url}}"], "path": ["predictions","lock-stage","R32"] }
           }
         },
         {
-          "name": "POST Test Email (SMTP — generic)",
+          "name": "GET My Stage Locks",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/my-stage-locks", "host": ["{{base_url}}"], "path": ["predictions","my-stage-locks"] }
+          }
+        },
+        {
+          "name": "DELETE My Predictions — Stage R32",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/me/stage/R32", "host": ["{{base_url}}"], "path": ["predictions","me","stage","R32"] }
+          }
+        },
+        {
+          "name": "DELETE My Predictions — Stage R16",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/predictions/me/stage/R16", "host": ["{{base_url}}"], "path": ["predictions","me","stage","R16"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Stages (fase por fase)",
+      "item": [
+        {
+          "name": "GET Stages Status (admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/admin/stages/status", "host": ["{{base_url}}"], "path": ["admin","stages","status"] }
+          }
+        },
+        {
+          "name": "POST Activate Stage — R32",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/admin/stages/R32/activate", "host": ["{{base_url}}"], "path": ["admin","stages","R32","activate"] }
+          }
+        },
+        {
+          "name": "POST Activate Stage — R16",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/admin/stages/R16/activate", "host": ["{{base_url}}"], "path": ["admin","stages","R16","activate"] }
+          }
+        },
+        {
+          "name": "POST Activate Stage — QF",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/admin/stages/QF/activate", "host": ["{{base_url}}"], "path": ["admin","stages","QF","activate"] }
+          }
+        },
+        {
+          "name": "POST Activate Stage — SF",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/admin/stages/SF/activate", "host": ["{{base_url}}"], "path": ["admin","stages","SF","activate"] }
+          }
+        },
+        {
+          "name": "POST Activate Stage — THIRD_PLACE",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/admin/stages/THIRD_PLACE/activate", "host": ["{{base_url}}"], "path": ["admin","stages","THIRD_PLACE","activate"] }
+          }
+        },
+        {
+          "name": "POST Activate Stage — FINAL",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/admin/stages/FINAL/activate", "host": ["{{base_url}}"], "path": ["admin","stages","FINAL","activate"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Matches",
+      "item": [
+        {
+          "name": "POST Create Matches (batch) — R32",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{base_url}}/admin/test-email",
-              "host": ["{{base_url}}"],
-              "path": ["admin", "test-email"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"to\": \"samuelcardenas1706@gmail.com\"\n}"
-            }
+            "url": { "raw": "{{base_url}}/admin/matches/batch", "host": ["{{base_url}}"], "path": ["admin","matches","batch"] },
+            "body": { "mode": "raw", "raw": "{\n  \"matches\": [\n    {\n      \"homeTeam\": \"Colombia\",\n      \"awayTeam\": \"Ecuador\",\n      \"scheduledAt\": \"2026-06-29T18:00:00.000Z\",\n      \"stage\": \"R32\",\n      \"phase\": \"KNOCKOUT\",\n      \"matchOrder\": 1\n    },\n    {\n      \"homeTeam\": \"Argentina\",\n      \"awayTeam\": \"México\",\n      \"scheduledAt\": \"2026-06-29T22:00:00.000Z\",\n      \"stage\": \"R32\",\n      \"phase\": \"KNOCKOUT\",\n      \"matchOrder\": 2\n    }\n  ]\n}" }
           }
         },
         {
-          "name": "POST Test Email — Knockout Activation",
+          "name": "POST Create Matches (batch) — R16",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{base_url}}/admin/test-email/knockout-activation",
-              "host": ["{{base_url}}"],
-              "path": ["admin", "test-email", "knockout-activation"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"to\": \"samuelcardenas1706@gmail.com\"\n}"
-            }
+            "url": { "raw": "{{base_url}}/admin/matches/batch", "host": ["{{base_url}}"], "path": ["admin","matches","batch"] },
+            "body": { "mode": "raw", "raw": "{\n  \"matches\": [\n    {\n      \"homeTeam\": \"Colombia\",\n      \"awayTeam\": \"Francia\",\n      \"scheduledAt\": \"2026-07-05T18:00:00.000Z\",\n      \"stage\": \"R16\",\n      \"phase\": \"KNOCKOUT\",\n      \"matchOrder\": 1\n    }\n  ]\n}" }
           }
         },
         {
-          "name": "POST Test Email — Knockout Reminder",
+          "name": "PATCH Match — actualizar score / equipo",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/matches/{{match_id}}", "host": ["{{base_url}}"], "path": ["matches","{{match_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"homeTeam\": \"Colombia\",\n  \"awayTeam\": \"Francia\",\n  \"homeScore\": 2,\n  \"awayScore\": 1,\n  \"status\": \"FINISHED\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Email",
+      "item": [
+        {
+          "name": "POST Test Email (SMTP — genérico)",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{base_url}}/admin/test-email/knockout-reminder",
-              "host": ["{{base_url}}"],
-              "path": ["admin", "test-email", "knockout-reminder"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"to\": \"samuelcardenas1706@gmail.com\"\n}"
-            }
+            "url": { "raw": "{{base_url}}/admin/test-email", "host": ["{{base_url}}"], "path": ["admin","test-email"] },
+            "body": { "mode": "raw", "raw": "{\n  \"to\": \"samuelcardenas1706@gmail.com\"\n}" }
+          }
+        },
+        {
+          "name": "POST Test Email — Stage Activation (R32)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/test-email/stage-activation", "host": ["{{base_url}}"], "path": ["admin","test-email","stage-activation"] },
+            "body": { "mode": "raw", "raw": "{\n  \"to\": \"samuelcardenas1706@gmail.com\",\n  \"stage\": \"R32\"\n}" }
+          }
+        },
+        {
+          "name": "POST Test Email — Stage Reminder (R32)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/test-email/stage-reminder", "host": ["{{base_url}}"], "path": ["admin","test-email","stage-reminder"] },
+            "body": { "mode": "raw", "raw": "{\n  \"to\": \"samuelcardenas1706@gmail.com\",\n  \"stage\": \"R32\"\n}" }
           }
         }
       ]
@@ -315,11 +381,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{base_url}}/leaderboard",
-              "host": ["{{base_url}}"],
-              "path": ["leaderboard"]
-            }
+            "url": { "raw": "{{base_url}}/leaderboard", "host": ["{{base_url}}"], "path": ["leaderboard"] }
           }
         }
       ]

@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MatchPhase } from '@prisma/client';
+import { MatchPhase, MatchStage } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UpsertPredictionDto } from './dto/upsert-prediction.dto.js';
 import { BulkPredictionsDto } from './dto/bulk-predictions.dto.js';
@@ -14,25 +14,14 @@ export class PredictionsService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Group stage: all 72 matches share ONE global deadline — the first match's scheduledAt.
-   * Knockout: same logic — first R32 match's scheduledAt becomes the knockout deadline.
+   * Group stage: global deadline = first GROUP_STAGE match's scheduledAt.
+   * Knockout: each stage has its own deadline = first match of that specific stage.
+   *           Stage must also be explicitly activated by admin in SystemConfig.
    */
   private async assertPhaseOpen(userId: string, matchId: string) {
     const match = await this.prisma.match.findUnique({ where: { id: matchId } });
     if (!match) throw new NotFoundException(`Match ${matchId} not found`);
 
-    // Phase deadline = earliest scheduledAt of the same phase
-    const firstMatch = await this.prisma.match.findFirst({
-      where: { phase: match.phase },
-      orderBy: { scheduledAt: 'asc' },
-      select: { scheduledAt: true },
-    });
-
-    if (firstMatch && firstMatch.scheduledAt <= new Date()) {
-      throw new BadRequestException('Predictions are closed for this phase');
-    }
-
-    // Manual group-stage lock
     if (match.phase === MatchPhase.GROUP_STAGE) {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -40,6 +29,40 @@ export class PredictionsService {
       });
       if (user?.groupStageLockedAt) {
         throw new ForbiddenException('Your group stage predictions are locked');
+      }
+
+      const firstMatch = await this.prisma.match.findFirst({
+        where: { phase: MatchPhase.GROUP_STAGE },
+        orderBy: { scheduledAt: 'asc' },
+        select: { scheduledAt: true },
+      });
+      if (firstMatch && firstMatch.scheduledAt <= new Date()) {
+        throw new BadRequestException('Predictions are closed for this phase');
+      }
+    } else {
+      // Knockout: stage must be activated by admin
+      const stageKey = `knockout_${match.stage.toLowerCase()}_open`;
+      const stageOpen = await this.prisma.systemConfig.findUnique({ where: { key: stageKey } });
+      if (stageOpen?.value !== 'true') {
+        throw new BadRequestException('This knockout stage is not open for predictions yet');
+      }
+
+      // User manually finalized this stage
+      const userLock = await this.prisma.userStageLock.findUnique({
+        where: { userId_stage: { userId, stage: match.stage } },
+      });
+      if (userLock) {
+        throw new ForbiddenException('You have already finalized your predictions for this stage');
+      }
+
+      // Auto-lock when first match of this specific stage kicks off
+      const firstMatch = await this.prisma.match.findFirst({
+        where: { stage: match.stage },
+        orderBy: { scheduledAt: 'asc' },
+        select: { scheduledAt: true },
+      });
+      if (firstMatch && firstMatch.scheduledAt <= new Date()) {
+        throw new BadRequestException('Predictions are closed for this stage');
       }
     }
 
@@ -65,12 +88,7 @@ export class PredictionsService {
         await this.assertPhaseOpen(userId, item.matchId);
         const prediction = await this.prisma.prediction.upsert({
           where: { userId_matchId: { userId, matchId: item.matchId } },
-          create: {
-            userId,
-            matchId: item.matchId,
-            homeScore: item.homeScore,
-            awayScore: item.awayScore,
-          },
+          create: { userId, matchId: item.matchId, homeScore: item.homeScore, awayScore: item.awayScore },
           update: { homeScore: item.homeScore, awayScore: item.awayScore },
         });
         results.push(prediction);
@@ -92,7 +110,6 @@ export class PredictionsService {
       throw new BadRequestException('Group stage predictions are already locked');
     }
 
-    // Require ALL group stage matches to have a prediction
     const [totalGroupMatches, userGroupPreds] = await Promise.all([
       this.prisma.match.count({ where: { phase: MatchPhase.GROUP_STAGE } }),
       this.prisma.prediction.count({
@@ -125,6 +142,71 @@ export class PredictionsService {
 
     const { count } = await this.prisma.prediction.deleteMany({ where: { userId } });
     return { deleted: count };
+  }
+
+  async lockKnockoutStage(userId: string, stage: MatchStage) {
+    // Stage must be activated
+    const stageKey = `knockout_${stage.toLowerCase()}_open`;
+    const stageOpen = await this.prisma.systemConfig.findUnique({ where: { key: stageKey } });
+    if (stageOpen?.value !== 'true') {
+      throw new BadRequestException('This knockout stage is not open for predictions yet');
+    }
+
+    // Already locked by user
+    const existing = await this.prisma.userStageLock.findUnique({
+      where: { userId_stage: { userId, stage } },
+    });
+    if (existing) {
+      throw new BadRequestException('Predictions for this stage are already finalized');
+    }
+
+    // First kickoff must not have passed
+    const firstMatch = await this.prisma.match.findFirst({
+      where: { stage },
+      orderBy: { scheduledAt: 'asc' },
+      select: { scheduledAt: true },
+    });
+    if (firstMatch && firstMatch.scheduledAt <= new Date()) {
+      throw new BadRequestException('Cannot finalize — this stage has already started');
+    }
+
+    // Require ALL matches for this stage to have a prediction
+    const [totalStageMatches, predCount] = await Promise.all([
+      this.prisma.match.count({ where: { stage } }),
+      this.prisma.prediction.count({ where: { userId, match: { stage } } }),
+    ]);
+    if (predCount < totalStageMatches) {
+      throw new BadRequestException(
+        `Debes completar los ${totalStageMatches} pronósticos de esta fase antes de finalizar (llevas ${predCount})`,
+      );
+    }
+
+    return this.prisma.userStageLock.create({ data: { userId, stage } });
+  }
+
+  async deleteByStage(userId: string, stage: MatchStage) {
+    const firstMatch = await this.prisma.match.findFirst({
+      where: { stage },
+      orderBy: { scheduledAt: 'asc' },
+      select: { scheduledAt: true },
+    });
+
+    if (firstMatch && firstMatch.scheduledAt <= new Date()) {
+      throw new ForbiddenException('Cannot delete predictions — this stage has already started');
+    }
+
+    const matchIds = await this.prisma.match
+      .findMany({ where: { stage }, select: { id: true } })
+      .then((ms) => ms.map((m) => m.id));
+
+    const { count } = await this.prisma.prediction.deleteMany({
+      where: { userId, matchId: { in: matchIds } },
+    });
+    return { deleted: count };
+  }
+
+  getStageLocks(userId: string) {
+    return this.prisma.userStageLock.findMany({ where: { userId } });
   }
 
   findByUser(userId: string) {

@@ -35,3 +35,4 @@ export function calculatePoints(
 
   return sameOutcome ? pts.outcome : 0;
 }
+
