@@ -42,7 +42,8 @@ model User {
   createdAt             DateTime  @default(now())
   groupStageLockedAt    DateTime?
 
-  predictions Prediction[]
+  predictions  Prediction[]
+  stageLocks   UserStageLock[]
 }
 
 model Match {
@@ -66,6 +67,17 @@ model SystemConfig {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model UserStageLock {
+  id       String     @id @default(cuid())
+  userId   String
+  stage    MatchStage
+  lockedAt DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, stage])
 }
 
 model Prediction {

@@ -41,6 +41,17 @@ export class PredictionsController {
   }
 
   @UseGuards(PlayerOnlyGuard)
+  @Post('lock-stage/:stage')
+  lockKnockoutStage(@Req() req: AuthenticatedRequest, @Param('stage') stage: string) {
+    return this.predictionsService.lockKnockoutStage(req.user.id, stage as any);
+  }
+
+  @Get('my-stage-locks')
+  getMyStageLocks(@Req() req: AuthenticatedRequest) {
+    return this.predictionsService.getStageLocks(req.user.id);
+  }
+
+  @UseGuards(PlayerOnlyGuard)
   @Put(':matchId')
   upsert(
     @Req() req: AuthenticatedRequest,

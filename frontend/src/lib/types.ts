@@ -35,6 +35,13 @@ export interface Prediction {
   match?: Match;
 }
 
+export interface UserStageLock {
+  id: string;
+  userId: string;
+  stage: MatchStage;
+  lockedAt: string;
+}
+
 export interface LeaderboardEntry {
   rank: number;
   userId: string;

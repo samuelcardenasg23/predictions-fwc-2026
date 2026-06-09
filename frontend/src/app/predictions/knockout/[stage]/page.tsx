@@ -1,14 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
-import { Match, MatchStage, KnockoutStageStatus, Prediction } from '@/lib/types';
+import { Match, MatchStage, KnockoutStageStatus, Prediction, UserStageLock } from '@/lib/types';
 import { MatchCard } from '@/components/match-card';
 import { PredictionsPhaseNav } from '@/components/predictions-phase-nav';
-import { Lock, Zap, Target, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Lock, Zap, Target, Trash2, ShieldCheck, X, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ─── constants ───────────────────────────────────────────────────────────────
@@ -34,20 +34,24 @@ const SLUG_TO_STAGE: Record<string, MatchStage> = {
 
 // ─── confirm modal ────────────────────────────────────────────────────────────
 
-function ConfirmClearModal({
+function ConfirmModal({
   open,
   onClose,
   onConfirm,
   loading,
+  variant,
   stageName,
 }: {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
   loading: boolean;
+  variant: 'lock' | 'clear';
   stageName: string;
 }) {
   if (!open) return null;
+
+  const isLock = variant === 'lock';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -61,17 +65,31 @@ function ConfirmClearModal({
         </button>
 
         <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl border bg-red-500/10 border-red-500/20">
-            <AlertTriangle className="h-5 w-5 text-red-400" />
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+              isLock
+                ? 'bg-green-500/10 border-green-500/20'
+                : 'bg-red-500/10 border-red-500/20'
+            }`}
+          >
+            {isLock ? (
+              <ShieldCheck className="h-5 w-5 text-green-400" />
+            ) : (
+              <AlertTriangle className="h-5 w-5 text-red-400" />
+            )}
           </div>
           <div>
-            <h3 className="font-bold text-slate-100">Borrar pronósticos</h3>
-            <p className="text-xs text-slate-500">Esta acción es irreversible</p>
+            <h3 className="font-bold text-slate-100">
+              {isLock ? `Finalizar — ${stageName}` : 'Borrar pronósticos'}
+            </h3>
+            <p className="text-xs text-slate-500">Esta acción no se puede deshacer</p>
           </div>
         </div>
 
         <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-          Se eliminarán todos tus pronósticos de <span className="font-semibold text-slate-200">{stageName}</span>. Tendrás que volver a ingresarlos antes de que arranquen los partidos.
+          {isLock
+            ? `Al confirmar, tus pronósticos de ${stageName} quedarán bloqueados permanentemente. Ya no podrás editarlos, ni siquiera antes de que empiecen los partidos.`
+            : `Se eliminarán todos tus pronósticos de ${stageName}. Tendrás que volver a ingresarlos antes de que arranquen los partidos.`}
         </p>
 
         <div className="flex gap-3">
@@ -85,9 +103,17 @@ function ConfirmClearModal({
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-bold text-white hover:bg-red-400 transition-all disabled:opacity-50"
+            className={`flex-1 rounded-xl py-2.5 text-sm font-bold transition-all disabled:opacity-50 ${
+              isLock
+                ? 'bg-green-500 text-slate-950 hover:bg-green-400'
+                : 'bg-red-500 text-white hover:bg-red-400'
+            }`}
           >
-            {loading ? 'Borrando...' : 'Sí, borrar todo'}
+            {loading
+              ? 'Procesando...'
+              : isLock
+              ? 'Sí, finalizar'
+              : 'Sí, borrar todo'}
           </button>
         </div>
       </div>
@@ -99,18 +125,16 @@ function ConfirmClearModal({
 
 export default function KnockoutStagePage() {
   const { user, token } = useAuth();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const params = useParams<{ stage: string }>();
   const slug = params.stage ?? 'r32';
   const stage = SLUG_TO_STAGE[slug];
 
-  const [showClearModal, setShowClearModal] = useState(false);
-  const [clearLoading, setClearLoading] = useState(false);
+  const [modal, setModal] = useState<'lock' | 'clear' | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [clearTrigger, setClearTrigger] = useState(0);
 
-  // Stage statuses for tab bar
   const { data: statuses } = useQuery<Record<MatchStage, KnockoutStageStatus>>({
     queryKey: ['stages-status'],
     staleTime: 30_000,
@@ -118,7 +142,13 @@ export default function KnockoutStagePage() {
     enabled: !!token,
   });
 
-  // Matches for this stage
+  const { data: stageLocks = [] } = useQuery<UserStageLock[]>({
+    queryKey: ['my-stage-locks'],
+    queryFn: () => api.get('/predictions/my-stage-locks').then((r) => r.data),
+    staleTime: 60_000,
+    enabled: !!token,
+  });
+
   const { data: allMatches = [], isLoading: loadingMatches } = useQuery<Match[]>({
     queryKey: ['matches-knockout', stage],
     queryFn: () =>
@@ -129,7 +159,6 @@ export default function KnockoutStagePage() {
     enabled: !!token && !!stage,
   });
 
-  // User predictions for knockout
   const { data: predictions = [] } = useQuery<Prediction[]>({
     queryKey: ['predictions', user?.id],
     queryFn: () => api.get('/predictions/me').then((r) => r.data),
@@ -144,15 +173,31 @@ export default function KnockoutStagePage() {
   }, [predictions]);
 
   const stageStatus = statuses?.[stage ?? 'R32'];
-  const isLocked = stageStatus === 'locked';
+  const isAutoLocked = stageStatus === 'locked';
   const isInactive = !stage || stageStatus === 'inactive' || stageStatus === undefined;
+  const isUserLocked = stageLocks.some((l) => l.stage === stage);
+  const isLocked = isAutoLocked || isUserLocked;
 
   const total = allMatches.length;
   const saved = allMatches.filter((m) => predMap.has(m.id)).length + savedIds.size;
   const progress = total > 0 ? Math.min(100, Math.round((saved / total) * 100)) : 0;
 
+  const handleLock = async () => {
+    setActionLoading(true);
+    try {
+      await api.post(`/predictions/lock-stage/${stage}`);
+      queryClient.invalidateQueries({ queryKey: ['my-stage-locks'] });
+      setModal(null);
+      toast.success(`¡Pronósticos de ${STAGE_LABELS[stage!]} finalizados!`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? 'Error al finalizar');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleClear = async () => {
-    setClearLoading(true);
+    setActionLoading(true);
     try {
       await api.delete(`/predictions/me/stage/${stage}`);
       setSavedIds(new Set());
@@ -160,12 +205,12 @@ export default function KnockoutStagePage() {
       queryClient.setQueryData(['predictions', user?.id], (prev: Prediction[] = []) =>
         prev.filter((p) => !allMatches.some((m) => m.id === p.matchId)),
       );
-      setShowClearModal(false);
+      setModal(null);
       toast.success('Pronósticos eliminados. Puedes volver a empezar.');
     } catch (err: any) {
       toast.error(err.response?.data?.message ?? 'Error al eliminar');
     } finally {
-      setClearLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -179,11 +224,12 @@ export default function KnockoutStagePage() {
 
   return (
     <>
-      <ConfirmClearModal
-        open={showClearModal}
-        onClose={() => setShowClearModal(false)}
-        onConfirm={handleClear}
-        loading={clearLoading}
+      <ConfirmModal
+        open={modal !== null}
+        onClose={() => setModal(null)}
+        onConfirm={modal === 'lock' ? handleLock : handleClear}
+        loading={actionLoading}
+        variant={modal ?? 'lock'}
         stageName={STAGE_LABELS[stage]}
       />
 
@@ -201,7 +247,9 @@ export default function KnockoutStagePage() {
               <h1 className="text-2xl font-black text-slate-100">{STAGE_LABELS[stage]}</h1>
               <p className="text-sm text-slate-500 mt-1">
                 {isLocked
-                  ? 'Los partidos ya arrancaron — pronósticos cerrados.'
+                  ? isUserLocked
+                    ? 'Tus predicciones están finalizadas y bloqueadas.'
+                    : 'Los partidos ya arrancaron — pronósticos cerrados.'
                   : isInactive
                   ? 'Esta fase aún no está activada.'
                   : 'Se guardan automáticamente · Cierre antes de cada partido'}
@@ -226,26 +274,48 @@ export default function KnockoutStagePage() {
             )}
           </div>
 
-          {/* Action buttons */}
-          {!isInactive && !isLocked && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                onClick={() => setShowClearModal(true)}
-                disabled={saved === 0}
-                className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 hover:border-red-500/40 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
-                Borrar todo
-              </button>
-            </div>
-          )}
-
-          {/* Lock banner */}
-          {isLocked && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
-              <Lock className="h-4 w-4 shrink-0" />
-              Los pronósticos de esta fase están cerrados — ya arrancaron los partidos.
-            </div>
+          {/* Lock banner or action buttons */}
+          {!isInactive && (
+            isLocked ? (
+              <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-green-500/20 bg-green-500/5 px-4 py-3">
+                <ShieldCheck className="h-5 w-5 text-green-400 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-green-400">Pronósticos bloqueados</p>
+                  <p className="text-xs text-slate-500">
+                    {isUserLocked
+                      ? `Finalizados el ${new Date(
+                          stageLocks.find((l) => l.stage === stage)!.lockedAt,
+                        ).toLocaleDateString('es-CO', {
+                          day: 'numeric',
+                          month: 'long',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'America/Bogota',
+                        })}`
+                      : 'Los partidos ya arrancaron — el cierre fue automático.'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setModal('lock')}
+                  disabled={saved === 0}
+                  className="flex items-center gap-2 rounded-xl bg-green-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
+                >
+                  <Lock className="h-4 w-4" />
+                  Finalizar predicciones
+                </button>
+                <button
+                  onClick={() => setModal('clear')}
+                  disabled={saved === 0}
+                  className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 hover:border-red-500/40 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Borrar todo
+                </button>
+              </div>
+            )
           )}
         </div>
 
@@ -294,11 +364,19 @@ export default function KnockoutStagePage() {
           </div>
         )}
 
-        {/* Bottom borrar todo (convenience after scrolling) */}
+        {/* Bottom borrar todo */}
         {!isInactive && !isLocked && total > 0 && (
           <div className="border-t border-slate-800/60 pt-6 flex flex-wrap gap-2">
             <button
-              onClick={() => setShowClearModal(true)}
+              onClick={() => setModal('lock')}
+              disabled={saved === 0}
+              className="flex items-center gap-2 rounded-xl bg-green-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
+            >
+              <Lock className="h-4 w-4" />
+              Finalizar predicciones
+            </button>
+            <button
+              onClick={() => setModal('clear')}
               disabled={saved === 0}
               className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 hover:border-red-500/40 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
