@@ -10,6 +10,8 @@ interface Recipient {
   name: string;
 }
 
+type EmailProvider = 'smtp' | 'brevo';
+
 const STAGE_LABELS: Record<MatchStage, string> = {
   GROUP: 'Fase de Grupos',
   R32: 'Fase de 32',
@@ -33,16 +35,32 @@ const STAGE_URLS: Record<MatchStage, string> = {
 @Injectable()
 export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: Transporter;
+  private transporter: Transporter | null = null;
+  private readonly provider: EmailProvider;
   private readonly from: string;
   private readonly frontendUrl: string;
+  private readonly brevoApiKey: string | undefined;
+  private readonly brevoSenderEmail: string | undefined;
+  private readonly brevoSenderName: string;
 
   constructor(private readonly config: ConfigService) {
-    this.from = this.config.getOrThrow('SMTP_FROM');
+    this.provider = this.config.get<EmailProvider>('EMAIL_PROVIDER', 'smtp');
+    this.from = this.config.get('SMTP_FROM', '');
     this.frontendUrl = this.config.getOrThrow('FRONTEND_URL');
+    this.brevoApiKey = this.config.get<string>('BREVO_API_KEY');
+    this.brevoSenderEmail = this.config.get<string>('BREVO_SENDER_EMAIL');
+    this.brevoSenderName = this.config.get<string>('BREVO_SENDER_NAME', 'Quiniela FWC 2026');
   }
 
   async onModuleInit(): Promise<void> {
+    if (this.provider === 'brevo') {
+      if (!this.brevoApiKey || !this.brevoSenderEmail) {
+        throw new Error('BREVO_API_KEY and BREVO_SENDER_EMAIL are required when EMAIL_PROVIDER=brevo');
+      }
+      this.logger.log(`Email provider: Brevo (sender: ${this.brevoSenderEmail})`);
+      return;
+    }
+
     const smtpHost = this.config.getOrThrow<string>('SMTP_HOST');
     const [ipv4] = await dns.resolve4(smtpHost);
 
@@ -56,6 +74,7 @@ export class EmailService implements OnModuleInit {
       },
       tls: { ciphers: 'SSLv3', servername: smtpHost },
     });
+    this.logger.log('Email provider: SMTP');
   }
 
   async sendStageActivation(stage: MatchStage, recipients: Recipient[], deadline: Date): Promise<void> {
@@ -83,13 +102,13 @@ export class EmailService implements OnModuleInit {
   }
 
   async sendTestEmail(to: string): Promise<void> {
-    await this.transporter.sendMail({
-      from: this.from,
-      to,
-      subject: '✅ Test SMTP — Quiniela FWC 2026',
-      html: '<p>El transporte SMTP funciona correctamente.</p>',
-    });
-    this.logger.log(`Test email sent to ${to}`);
+    const subject = this.provider === 'brevo'
+      ? '✅ Test Brevo — Quiniela FWC 2026'
+      : '✅ Test SMTP — Quiniela FWC 2026';
+    const html = `<p>El transporte de email (${this.provider.toUpperCase()}) funciona correctamente.</p>`;
+
+    await this.sendMail(to, subject, html);
+    this.logger.log(`Test email sent to ${to} via ${this.provider}`);
   }
 
   private async sendBatch(
@@ -99,12 +118,43 @@ export class EmailService implements OnModuleInit {
   ): Promise<void> {
     for (const { email, name } of recipients) {
       try {
-        await this.transporter.sendMail({ from: this.from, to: email, subject, html: htmlFn(name) });
+        await this.sendMail(email, subject, htmlFn(name));
       } catch (err) {
         this.logger.error(`Failed to send to ${email}`, err);
       }
     }
     this.logger.log(`Sent ${recipients.length} emails — "${subject}"`);
+  }
+
+  private async sendMail(to: string, subject: string, html: string): Promise<void> {
+    if (this.provider === 'brevo') {
+      await this.sendViaBrevo(to, subject, html);
+      return;
+    }
+
+    await this.transporter!.sendMail({ from: this.from, to, subject, html });
+  }
+
+  private async sendViaBrevo(to: string, subject: string, html: string): Promise<void> {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': this.brevoApiKey!,
+        'Content-Type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: this.brevoSenderName, email: this.brevoSenderEmail },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Brevo API error ${response.status}: ${body}`);
+    }
   }
 
   private formatDate(date: Date): string {
