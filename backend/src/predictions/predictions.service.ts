@@ -23,6 +23,16 @@ export class PredictionsService {
     if (!match) throw new NotFoundException(`Match ${matchId} not found`);
 
     if (match.phase === MatchPhase.GROUP_STAGE) {
+      // Per-match guard: excluded matches are read-only regardless of global deadline
+      if (match.excludedFromPool) {
+        throw new BadRequestException('This match is excluded from the pool and cannot be predicted');
+      }
+
+      // Per-match guard: individual kickoff has passed
+      if (match.scheduledAt <= new Date()) {
+        throw new BadRequestException('Predictions are closed for this match');
+      }
+
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { groupStageLockedAt: true },
@@ -31,8 +41,9 @@ export class PredictionsService {
         throw new ForbiddenException('Your group stage predictions are locked');
       }
 
+      // Deadline = first non-excluded GROUP_STAGE match
       const firstMatch = await this.prisma.match.findFirst({
-        where: { phase: MatchPhase.GROUP_STAGE },
+        where: { phase: MatchPhase.GROUP_STAGE, excludedFromPool: false },
         orderBy: { scheduledAt: 'asc' },
         select: { scheduledAt: true },
       });
@@ -111,9 +122,9 @@ export class PredictionsService {
     }
 
     const [totalGroupMatches, userGroupPreds] = await Promise.all([
-      this.prisma.match.count({ where: { phase: MatchPhase.GROUP_STAGE } }),
+      this.prisma.match.count({ where: { phase: MatchPhase.GROUP_STAGE, excludedFromPool: false } }),
       this.prisma.prediction.count({
-        where: { userId, match: { phase: MatchPhase.GROUP_STAGE } },
+        where: { userId, match: { phase: MatchPhase.GROUP_STAGE, excludedFromPool: false } },
       }),
     ]);
 

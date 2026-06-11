@@ -154,7 +154,9 @@ export default function PredictionsPage() {
 
   const tournamentStarted = useMemo(() => {
     if (!matches || matches.length === 0) return false;
-    const firstKickoff = Math.min(...matches.map((m) => new Date(m.scheduledAt).getTime()));
+    const poolMatches = matches.filter((m) => !m.excludedFromPool);
+    if (poolMatches.length === 0) return true;
+    const firstKickoff = Math.min(...poolMatches.map((m) => new Date(m.scheduledAt).getTime()));
     return firstKickoff <= Date.now();
   }, [matches]);
 
@@ -196,8 +198,12 @@ export default function PredictionsPage() {
 
   if (authLoading || !user || user.role === 'ADMIN') return null;
 
-  const totalMatches = matches?.length ?? 72;
-  const savedCount = (predictions?.length ?? 0) + savedIds.size;
+  const poolMatches = matches?.filter((m) => !m.excludedFromPool) ?? [];
+  const totalMatches = poolMatches.length || 71;
+  const savedCount = (predictions?.filter((p) => {
+    const m = matches?.find((m) => m.id === p.matchId);
+    return !m?.excludedFromPool;
+  }).length ?? 0) + savedIds.size;
   const progress = Math.min(100, Math.round((savedCount / totalMatches) * 100));
   const isLoading = matchesLoading || predsLoading;
 

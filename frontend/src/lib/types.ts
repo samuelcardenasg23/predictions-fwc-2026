@@ -24,6 +24,7 @@ export interface Match {
   phase: MatchPhase;
   groupName: string | null;
   matchOrder: number | null;
+  excludedFromPool: boolean;
 }
 
 export interface Prediction {

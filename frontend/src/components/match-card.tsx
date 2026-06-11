@@ -148,6 +148,13 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
         </div>
       )}
 
+      {/* Excluded from pool badge */}
+      {match.excludedFromPool && (
+        <div className="absolute -top-px right-4 rounded-b-md bg-slate-700 px-2 py-0.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">No cuenta para el puntaje</span>
+        </div>
+      )}
+
       {/* Date/Time */}
       <div className={cn('w-14 shrink-0 text-center', isLive ? 'mt-3' : '')}>
         <p className="text-[10px] font-medium text-slate-600 uppercase">{date}</p>

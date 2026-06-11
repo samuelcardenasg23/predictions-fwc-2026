@@ -57,8 +57,9 @@ model Match {
   status        MatchStatus @default(SCHEDULED)
   stage         MatchStage
   phase         MatchPhase
-  groupName     String?
-  matchOrder    Int?
+  groupName        String?
+  matchOrder       Int?
+  excludedFromPool Boolean @default(false)
 
   predictions Prediction[]
 }

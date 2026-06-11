@@ -26,6 +26,7 @@ export class LeaderboardService {
             awayScore: true,
             stage: true,
             status: true,
+            excludedFromPool: true,
           },
         },
         user: { select: { id: true, name: true } },
@@ -45,6 +46,9 @@ export class LeaderboardService {
       }
 
       const entry = statsMap.get(user.id)!;
+
+      if (match.excludedFromPool) continue;
+
       entry.total += 1;
 
       const isPlayed =
