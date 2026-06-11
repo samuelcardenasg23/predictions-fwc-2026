@@ -13,6 +13,10 @@ const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono'
 export const metadata: Metadata = {
   title: 'Quiniela FWC 2026',
   description: 'Pronósticos del Mundial de Fútbol 2026 · 104 partidos · Tabla en vivo',
+  icons: {
+    icon: '/favicon.png',
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
