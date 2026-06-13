@@ -61,16 +61,21 @@ export class GroupStagePoolService {
     return user.groupStageEntryAt ?? now;
   }
 
-  /** Is this match part of the user's personal pool (counts toward their progress/score)? */
+  /**
+   * Is this match part of the user's personal pool (counts toward their progress/score)?
+   *
+   * The global deadline closes *saving* (see {@link canPredict}), it does NOT shrink the
+   * pool — a late entrant's pool spans every non-excluded group match after their entry,
+   * regardless of whether kickoff is before or after the deadline.
+   */
   isInPool(
     user: UserPoolFields,
     match: MatchPoolFields,
-    deadline: Date | null,
+    _deadline: Date | null,
     now: Date,
   ): boolean {
     if (match.phase !== MatchPhase.GROUP_STAGE) return false;
     if (match.excludedFromPool) return false;
-    if (deadline && match.scheduledAt >= deadline) return false;
     if (this.isLegacyLocked(user)) return true;
     return match.scheduledAt > this.effectiveEntryAt(user, now);
   }
@@ -140,20 +145,33 @@ export class GroupStagePoolService {
     };
 
     const predictedIds = new Set(predictions.map((p) => p.matchId));
-    const poolIds = matches
-      .filter((m) => this.isInPool(safeUser, m, deadline, now))
-      .map((m) => m.id);
-    const savedCount = poolIds.filter((id) => predictedIds.has(id)).length;
-
     const legacy = this.isLegacyLocked(safeUser);
     const deadlinePassed = deadline ? now >= deadline : false;
+
+    let poolSize: number;
+    let savedCount: number;
+    if (legacy) {
+      // Locked users keep a fixed quiniela: progress is just their non-excluded
+      // predictions — don't recompute a broad pool that would show them "incomplete".
+      const nonExcluded = matches.filter(
+        (m) => !m.excludedFromPool && predictedIds.has(m.id),
+      ).length;
+      poolSize = nonExcluded;
+      savedCount = nonExcluded;
+    } else {
+      const poolIds = matches
+        .filter((m) => this.isInPool(safeUser, m, deadline, now))
+        .map((m) => m.id);
+      poolSize = poolIds.length;
+      savedCount = poolIds.filter((id) => predictedIds.has(id)).length;
+    }
 
     return {
       isLegacyLocked: legacy,
       globalDeadline: deadline ? deadline.toISOString() : null,
       deadlinePassed,
       entryAt: safeUser.groupStageEntryAt ? safeUser.groupStageEntryAt.toISOString() : null,
-      poolSize: poolIds.length,
+      poolSize,
       savedCount,
       canEdit: !legacy && !deadlinePassed,
     };

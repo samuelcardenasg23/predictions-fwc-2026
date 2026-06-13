@@ -90,10 +90,10 @@ export function MatchCard({
   // Reason shown when this match is locked but the phase as a whole isn't.
   const lockReason = match.excludedFromPool
     ? null // handled by its own badge
-    : !inUserPool
-      ? 'Fuera de tu quiniela'
-      : started
-        ? 'Ya empezó'
+    : started
+      ? 'Ya empezó'
+      : !inUserPool
+        ? 'Fuera de tu quiniela'
         : null;
   const [home, setHome] = useState(prediction?.homeScore?.toString() ?? '');
   const [away, setAway] = useState(prediction?.awayScore?.toString() ?? '');

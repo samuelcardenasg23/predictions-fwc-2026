@@ -166,14 +166,15 @@ export default function PredictionsPage() {
     : !!user?.groupStageLockedAt;
 
   // Per-match helpers mirror the backend GroupStagePoolService.
-  const deadlineMs = status?.globalDeadline ? new Date(status.globalDeadline).getTime() : null;
   const entryMs = status?.entryAt ? new Date(status.entryAt).getTime() : null;
   const isLegacy = status?.isLegacyLocked ?? !!user?.groupStageLockedAt;
 
+  // The global deadline closes saving (see canPredictMatch / isGloballyLocked),
+  // it does NOT shrink the pool. A late entrant's pool spans every non-excluded
+  // group match after their entry, regardless of the deadline.
   const inUserPool = (match: Match) => {
     if (match.excludedFromPool) return false;
     const kickoff = new Date(match.scheduledAt).getTime();
-    if (deadlineMs !== null && kickoff >= deadlineMs) return false;
     if (isLegacy) return true;
     return kickoff > (entryMs ?? Date.now());
   };

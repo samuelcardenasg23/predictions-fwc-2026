@@ -70,9 +70,24 @@ describe('GroupStagePoolService (pure logic)', () => {
       expect(service.countsForScoring(lateEntered, match(), true, deadline, now)).toBe(true);
     });
 
-    it('pool excludes matches at/after the global deadline', () => {
+    it('pool INCLUDES matches whose kickoff is after the global deadline', () => {
+      // The deadline closes saving, it does not shrink the pool.
       const afterDeadline = match({ scheduledAt: new Date('2026-06-15T18:00:00Z') });
-      expect(service.isInPool(lateEntered, afterDeadline, deadline, now)).toBe(false);
+      expect(service.isInPool(lateEntered, afterDeadline, deadline, now)).toBe(true);
+      expect(service.countsForScoring(lateEntered, afterDeadline, true, deadline, now)).toBe(true);
+    });
+
+    it('can still predict a post-deadline-kickoff match while before the deadline', () => {
+      const afterDeadline = match({ scheduledAt: new Date('2026-06-15T18:00:00Z') });
+      expect(service.canPredict(lateEntered, afterDeadline, deadline, now)).toBe(true);
+    });
+
+    it('cannot save once now is at/after the global deadline, even for a future match', () => {
+      const afterDeadlineNow = new Date('2026-06-15T16:30:00Z');
+      const futureMatch = match({ scheduledAt: new Date('2026-06-16T16:00:00Z') });
+      expect(service.canPredict(lateEntered, futureMatch, deadline, afterDeadlineNow)).toBe(false);
+      // ...but it remains in the pool and keeps scoring.
+      expect(service.isInPool(lateEntered, futureMatch, deadline, afterDeadlineNow)).toBe(true);
     });
   });
 
