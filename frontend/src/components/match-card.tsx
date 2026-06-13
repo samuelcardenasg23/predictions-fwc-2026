@@ -87,14 +87,22 @@ export function MatchCard({
 }: Props) {
   const started = new Date(match.scheduledAt).getTime() <= Date.now();
   const isLocked = readOnly || globalLocked || !canPredict;
-  // Reason shown when this match is locked but the phase as a whole isn't.
-  const lockReason = match.excludedFromPool
-    ? null // handled by its own badge
-    : started
-      ? 'Ya empezó'
-      : !inUserPool
-        ? 'Fuera de tu quiniela'
-        : null;
+  const isLive = match.status === 'LIVE';
+  const isFinished = match.status === 'FINISHED';
+  const hasResult = match.homeScore != null && match.awayScore != null;
+  // Per-match badge shown when this match is individually locked but the phase as
+  // a whole isn't. When globally locked, the page renders a single banner instead,
+  // and excluded/live matches carry their own indicators — so skip those here.
+  let blockReason: string | null = null;
+  if (!canPredict && !globalLocked && !match.excludedFromPool && !isLive) {
+    if (isFinished || (started && hasResult)) {
+      blockReason = inUserPool ? 'Partido finalizado' : 'Fuera de tu quiniela';
+    } else if (started) {
+      blockReason = 'Partido finalizado';
+    } else if (!inUserPool) {
+      blockReason = 'Fuera de tu quiniela';
+    }
+  }
   const [home, setHome] = useState(prediction?.homeScore?.toString() ?? '');
   const [away, setAway] = useState(prediction?.awayScore?.toString() ?? '');
   const [status, setStatus] = useState<SaveStatus>('idle');
@@ -142,8 +150,6 @@ export function MatchCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedHome, debouncedAway]);
 
-  const isLive = match.status === 'LIVE';
-  const isFinished = match.status === 'FINISHED';
   const resultType = isFinished && prediction ? getPredictionResult(prediction, match) : null;
 
   return (
@@ -177,10 +183,10 @@ export function MatchCard({
         </div>
       )}
 
-      {/* Per-match lock reason (pool / kickoff) — only for matches still pending */}
-      {lockReason && !isLive && !isFinished && (
+      {/* Per-match lock reason — pool / finished status for non-editable matches */}
+      {blockReason && (
         <div className="absolute -top-px right-4 rounded-b-md bg-slate-800 border border-slate-700/60 px-2 py-0.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/80">{lockReason}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/80">{blockReason}</span>
         </div>
       )}
 
