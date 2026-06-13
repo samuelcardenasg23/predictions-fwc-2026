@@ -51,6 +51,11 @@ export class PredictionsController {
     return this.predictionsService.getStageLocks(req.user.id);
   }
 
+  @Get('group-stage/status')
+  getGroupStageStatus(@Req() req: AuthenticatedRequest) {
+    return this.predictionsService.getGroupStageStatus(req.user.id);
+  }
+
   @UseGuards(PlayerOnlyGuard)
   @Put(':matchId')
   upsert(

@@ -41,6 +41,7 @@ model User {
   role                  Role      @default(USER)
   createdAt             DateTime  @default(now())
   groupStageLockedAt    DateTime?
+  groupStageEntryAt     DateTime?
 
   predictions  Prediction[]
   stageLocks   UserStageLock[]

@@ -57,3 +57,13 @@ export interface AuthResponse {
   access_token: string;
   user: User;
 }
+
+export interface GroupStageStatus {
+  isLegacyLocked: boolean;
+  globalDeadline: string | null;
+  deadlinePassed: boolean;
+  entryAt: string | null;
+  poolSize: number;
+  savedCount: number;
+  canEdit: boolean;
+}

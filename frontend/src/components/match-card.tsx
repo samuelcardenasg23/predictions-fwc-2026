@@ -14,6 +14,10 @@ interface Props {
   prediction?: Prediction;
   readOnly?: boolean;
   globalLocked?: boolean;
+  /** Whether this specific match can be predicted right now (pool + kickoff + deadline). */
+  canPredict?: boolean;
+  /** Whether this match counts toward the user's personal pool. */
+  inUserPool?: boolean;
   clearTrigger?: number;
   onSaved?: (matchId: string) => void;
 }
@@ -71,8 +75,26 @@ function ScoreInput({
   );
 }
 
-export function MatchCard({ match, prediction, readOnly = false, globalLocked = false, clearTrigger, onSaved }: Props) {
-  const isLocked = readOnly || globalLocked;
+export function MatchCard({
+  match,
+  prediction,
+  readOnly = false,
+  globalLocked = false,
+  canPredict = true,
+  inUserPool = true,
+  clearTrigger,
+  onSaved,
+}: Props) {
+  const started = new Date(match.scheduledAt).getTime() <= Date.now();
+  const isLocked = readOnly || globalLocked || !canPredict;
+  // Reason shown when this match is locked but the phase as a whole isn't.
+  const lockReason = match.excludedFromPool
+    ? null // handled by its own badge
+    : !inUserPool
+      ? 'Fuera de tu quiniela'
+      : started
+        ? 'Ya empezó'
+        : null;
   const [home, setHome] = useState(prediction?.homeScore?.toString() ?? '');
   const [away, setAway] = useState(prediction?.awayScore?.toString() ?? '');
   const [status, setStatus] = useState<SaveStatus>('idle');
@@ -152,6 +174,13 @@ export function MatchCard({ match, prediction, readOnly = false, globalLocked = 
       {match.excludedFromPool && (
         <div className="absolute -top-px right-4 rounded-b-md bg-slate-700 px-2 py-0.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">No cuenta para el puntaje</span>
+        </div>
+      )}
+
+      {/* Per-match lock reason (pool / kickoff) — only for matches still pending */}
+      {lockReason && !isLive && !isFinished && (
+        <div className="absolute -top-px right-4 rounded-b-md bg-slate-800 border border-slate-700/60 px-2 py-0.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/80">{lockReason}</span>
         </div>
       )}
 

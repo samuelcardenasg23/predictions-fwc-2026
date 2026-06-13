@@ -8,13 +8,18 @@ import { MatchPhase, MatchStage } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UpsertPredictionDto } from './dto/upsert-prediction.dto.js';
 import { BulkPredictionsDto } from './dto/bulk-predictions.dto.js';
+import { GroupStagePoolService } from './group-stage-pool.service.js';
 
 @Injectable()
 export class PredictionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private pool: GroupStagePoolService,
+  ) {}
 
   /**
-   * Group stage: global deadline = first GROUP_STAGE match's scheduledAt.
+   * Group stage: per-user personal pool + a single global deadline
+   *              (SystemConfig.group_stage_deadline_at). See GroupStagePoolService.
    * Knockout: each stage has its own deadline = first match of that specific stage.
    *           Stage must also be explicitly activated by admin in SystemConfig.
    */
@@ -23,32 +28,35 @@ export class PredictionsService {
     if (!match) throw new NotFoundException(`Match ${matchId} not found`);
 
     if (match.phase === MatchPhase.GROUP_STAGE) {
-      // Per-match guard: excluded matches are read-only regardless of global deadline
+      const now = new Date();
+      const [user, deadline] = await Promise.all([
+        this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { groupStageLockedAt: true, groupStageEntryAt: true },
+        }),
+        this.pool.getGlobalDeadline(),
+      ]);
+      if (!user) throw new NotFoundException(`User ${userId} not found`);
+
+      // Legacy users that already finalized stay locked.
+      if (this.pool.isLegacyLocked(user)) {
+        throw new ForbiddenException('Your group stage predictions are locked');
+      }
+      // Single global deadline closes the whole phase for everyone not locked.
+      if (deadline && now >= deadline) {
+        throw new BadRequestException('El plazo para pronosticar la fase de grupos ya cerró');
+      }
+      // Excluded matches (e.g. México vs Sudáfrica) are read-only for everyone.
       if (match.excludedFromPool) {
         throw new BadRequestException('This match is excluded from the pool and cannot be predicted');
       }
-
-      // Per-match guard: individual kickoff has passed
-      if (match.scheduledAt <= new Date()) {
+      // Anti-cheat: this match's kickoff already passed.
+      if (match.scheduledAt <= now) {
         throw new BadRequestException('Predictions are closed for this match');
       }
-
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { groupStageLockedAt: true },
-      });
-      if (user?.groupStageLockedAt) {
-        throw new ForbiddenException('Your group stage predictions are locked');
-      }
-
-      // Deadline = first non-excluded GROUP_STAGE match
-      const firstMatch = await this.prisma.match.findFirst({
-        where: { phase: MatchPhase.GROUP_STAGE, excludedFromPool: false },
-        orderBy: { scheduledAt: 'asc' },
-        select: { scheduledAt: true },
-      });
-      if (firstMatch && firstMatch.scheduledAt <= new Date()) {
-        throw new BadRequestException('Predictions are closed for this phase');
+      // Defensive: late entrants can only touch matches inside their personal pool.
+      if (!this.pool.isInPool(user, match, deadline, now)) {
+        throw new BadRequestException('This match is outside your prediction pool');
       }
     } else {
       // Knockout: stage must be activated by admin
@@ -81,7 +89,11 @@ export class PredictionsService {
   }
 
   async upsert(userId: string, matchId: string, dto: UpsertPredictionDto) {
-    await this.assertPhaseOpen(userId, matchId);
+    const match = await this.assertPhaseOpen(userId, matchId);
+    if (match.phase === MatchPhase.GROUP_STAGE) {
+      // First group-stage save fixes a late entrant's personal pool boundary.
+      await this.pool.ensureEntryAt(userId);
+    }
     return this.prisma.prediction.upsert({
       where: { userId_matchId: { userId, matchId } },
       create: { userId, matchId, homeScore: dto.homeScore, awayScore: dto.awayScore },
@@ -93,15 +105,20 @@ export class PredictionsService {
   async bulkUpsert(userId: string, dto: BulkPredictionsDto) {
     const results: { id: string; matchId: string; userId: string }[] = [];
     const errors: { matchId: string; error: string }[] = [];
+    let entryFixed = false;
 
     for (const item of dto.predictions) {
       try {
-        await this.assertPhaseOpen(userId, item.matchId);
+        const match = await this.assertPhaseOpen(userId, item.matchId);
         const prediction = await this.prisma.prediction.upsert({
           where: { userId_matchId: { userId, matchId: item.matchId } },
           create: { userId, matchId: item.matchId, homeScore: item.homeScore, awayScore: item.awayScore },
           update: { homeScore: item.homeScore, awayScore: item.awayScore },
         });
+        if (match.phase === MatchPhase.GROUP_STAGE && !entryFixed) {
+          await this.pool.ensureEntryAt(userId);
+          entryFixed = true;
+        }
         results.push(prediction);
       } catch (err: any) {
         errors.push({ matchId: item.matchId, error: err.message });
@@ -121,16 +138,18 @@ export class PredictionsService {
       throw new BadRequestException('Group stage predictions are already locked');
     }
 
-    const [totalGroupMatches, userGroupPreds] = await Promise.all([
-      this.prisma.match.count({ where: { phase: MatchPhase.GROUP_STAGE, excludedFromPool: false } }),
-      this.prisma.prediction.count({
-        where: { userId, match: { phase: MatchPhase.GROUP_STAGE, excludedFromPool: false } },
-      }),
-    ]);
+    // Late entrants must complete their *personal* pool, not the whole calendar.
+    const status = await this.pool.getStatus(userId);
 
-    if (userGroupPreds < totalGroupMatches) {
+    if (status.deadlinePassed) {
+      throw new BadRequestException('El plazo de la fase de grupos ya cerró');
+    }
+    if (status.poolSize === 0) {
+      throw new BadRequestException('No tienes partidos disponibles para pronosticar en este momento');
+    }
+    if (status.savedCount < status.poolSize) {
       throw new BadRequestException(
-        `Debes completar los ${totalGroupMatches} pronósticos de la fase de grupos antes de finalizar. Te faltan ${totalGroupMatches - userGroupPreds}.`,
+        `Debes completar los ${status.poolSize} pronósticos de tu quiniela antes de finalizar. Te faltan ${status.poolSize - status.savedCount}.`,
       );
     }
 
@@ -139,6 +158,10 @@ export class PredictionsService {
       data: { groupStageLockedAt: new Date() },
       select: { id: true, groupStageLockedAt: true },
     });
+  }
+
+  getGroupStageStatus(userId: string) {
+    return this.pool.getStatus(userId);
   }
 
   async deleteAll(userId: string) {

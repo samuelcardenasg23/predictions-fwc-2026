@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { MatchStatus } from '@prisma/client';
+import { MatchPhase, MatchStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { calculatePoints } from '../scoring/scoring.util.js';
+import { GroupStagePoolService } from '../predictions/group-stage-pool.service.js';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -15,9 +16,14 @@ export interface LeaderboardEntry {
 
 @Injectable()
 export class LeaderboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pool: GroupStagePoolService,
+  ) {}
 
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
+    const now = new Date();
+    const deadline = await this.pool.getGlobalDeadline();
     const predictions = await this.prisma.prediction.findMany({
       include: {
         match: {
@@ -26,10 +32,19 @@ export class LeaderboardService {
             awayScore: true,
             stage: true,
             status: true,
+            phase: true,
+            scheduledAt: true,
             excludedFromPool: true,
           },
         },
-        user: { select: { id: true, name: true } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            groupStageLockedAt: true,
+            groupStageEntryAt: true,
+          },
+        },
       },
     });
 
@@ -47,7 +62,13 @@ export class LeaderboardService {
 
       const entry = statsMap.get(user.id)!;
 
-      if (match.excludedFromPool) continue;
+      // Group stage: per-user pool decides what scores (legacy vs late entrant).
+      // Knockout: excluded matches simply don't count.
+      if (match.phase === MatchPhase.GROUP_STAGE) {
+        if (!this.pool.countsForScoring(user, match, true, deadline, now)) continue;
+      } else if (match.excludedFromPool) {
+        continue;
+      }
 
       entry.total += 1;
 

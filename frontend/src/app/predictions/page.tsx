@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
-import { Match, Prediction } from '@/lib/types';
+import { Match, Prediction, GroupStageStatus } from '@/lib/types';
 import { MatchCard } from '@/components/match-card';
 import { Target, Lock, Trash2, ShieldCheck, X, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -136,6 +136,13 @@ export default function PredictionsPage() {
     enabled: !!user,
   });
 
+  const { data: status } = useQuery<GroupStageStatus>({
+    queryKey: ['predictions', 'group-stage', 'status'],
+    queryFn: () => api.get('/predictions/group-stage/status').then((r) => r.data),
+    enabled: !!user,
+    refetchInterval: 60_000,
+  });
+
   const predMap = useMemo(() => {
     const map = new Map<string, Prediction>();
     predictions?.forEach((p) => map.set(p.matchId, p));
@@ -152,15 +159,31 @@ export default function PredictionsPage() {
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [matches]);
 
-  const tournamentStarted = useMemo(() => {
-    if (!matches || matches.length === 0) return false;
-    const poolMatches = matches.filter((m) => !m.excludedFromPool);
-    if (poolMatches.length === 0) return true;
-    const firstKickoff = Math.min(...poolMatches.map((m) => new Date(m.scheduledAt).getTime()));
-    return firstKickoff <= Date.now();
-  }, [matches]);
+  // Global lock = the user already finalized (legacy) OR the global deadline passed.
+  // Falls back to the auth user's lock flag while the status query is loading.
+  const isGloballyLocked = status
+    ? status.isLegacyLocked || status.deadlinePassed
+    : !!user?.groupStageLockedAt;
 
-  const isGloballyLocked = !!user?.groupStageLockedAt || tournamentStarted;
+  // Per-match helpers mirror the backend GroupStagePoolService.
+  const deadlineMs = status?.globalDeadline ? new Date(status.globalDeadline).getTime() : null;
+  const entryMs = status?.entryAt ? new Date(status.entryAt).getTime() : null;
+  const isLegacy = status?.isLegacyLocked ?? !!user?.groupStageLockedAt;
+
+  const inUserPool = (match: Match) => {
+    if (match.excludedFromPool) return false;
+    const kickoff = new Date(match.scheduledAt).getTime();
+    if (deadlineMs !== null && kickoff >= deadlineMs) return false;
+    if (isLegacy) return true;
+    return kickoff > (entryMs ?? Date.now());
+  };
+
+  const canPredictMatch = (match: Match) => {
+    if (isGloballyLocked) return false;
+    if (match.excludedFromPool) return false;
+    if (new Date(match.scheduledAt).getTime() <= Date.now()) return false;
+    return inUserPool(match);
+  };
 
   const handleLock = async () => {
     setActionLoading(true);
@@ -170,6 +193,7 @@ export default function PredictionsPage() {
       if (user && token) {
         login(token, { ...user, groupStageLockedAt: new Date().toISOString() });
       }
+      queryClient.invalidateQueries({ queryKey: ['predictions', 'group-stage', 'status'] });
       setModal(null);
       toast.success('¡Predicciones finalizadas! Ya no pueden ser modificadas.');
     } catch (err: any) {
@@ -187,6 +211,7 @@ export default function PredictionsPage() {
       setClearTrigger((t) => t + 1);
       queryClient.setQueryData(['predictions', 'me'], []);
       queryClient.invalidateQueries({ queryKey: ['predictions', 'me'] });
+      queryClient.invalidateQueries({ queryKey: ['predictions', 'group-stage', 'status'] });
       setModal(null);
       toast.success('Predicciones eliminadas. Puedes volver a empezar.');
     } catch (err: any) {
@@ -198,13 +223,12 @@ export default function PredictionsPage() {
 
   if (authLoading || !user || user.role === 'ADMIN') return null;
 
-  const poolMatches = matches?.filter((m) => !m.excludedFromPool) ?? [];
-  const totalMatches = poolMatches.length || 71;
-  const savedCount = (predictions?.filter((p) => {
-    const m = matches?.find((m) => m.id === p.matchId);
-    return !m?.excludedFromPool;
-  }).length ?? 0) + savedIds.size;
-  const progress = Math.min(100, Math.round((savedCount / totalMatches) * 100));
+  // Progress is driven by the personal pool reported by the backend status endpoint.
+  const totalMatches =
+    status?.poolSize ?? (matches?.filter((m) => !m.excludedFromPool).length || 0);
+  const savedCount = status?.savedCount ?? 0;
+  const progress = totalMatches > 0 ? Math.min(100, Math.round((savedCount / totalMatches) * 100)) : 0;
+  const hasSaved = savedCount > 0 || savedIds.size > 0;
   const isLoading = matchesLoading || predsLoading;
 
   return (
@@ -238,10 +262,18 @@ export default function PredictionsPage() {
               <h1 className="text-2xl font-black text-slate-100">Mis pronósticos</h1>
               <p className="text-sm text-slate-500 mt-1">
                 {isGloballyLocked
-                  ? user.groupStageLockedAt
+                  ? isLegacy
                     ? 'Tus predicciones están finalizadas y bloqueadas.'
-                    : 'El torneo ya comenzó. Los pronósticos están cerrados.'
-                  : 'Se guardan automáticamente · Cierre antes de cada partido'}
+                    : 'El plazo de la fase de grupos ya cerró. Los pronósticos están cerrados.'
+                  : status?.globalDeadline
+                    ? `Se guardan automáticamente · Cierre ${new Date(status.globalDeadline).toLocaleString('es-CO', {
+                        day: 'numeric',
+                        month: 'long',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'America/Bogota',
+                      })}`
+                    : 'Se guardan automáticamente · Cierre antes de cada partido'}
               </p>
             </div>
 
@@ -268,7 +300,7 @@ export default function PredictionsPage() {
               <div>
                 <p className="text-sm font-semibold text-green-400">Pronósticos bloqueados</p>
                 <p className="text-xs text-slate-500">
-                  {user.groupStageLockedAt
+                  {isLegacy && user.groupStageLockedAt
                     ? `Finalizados el ${new Date(user.groupStageLockedAt).toLocaleDateString('es-CO', {
                         day: 'numeric',
                         month: 'long',
@@ -276,7 +308,7 @@ export default function PredictionsPage() {
                         minute: '2-digit',
                         timeZone: 'America/Bogota',
                       })}`
-                    : 'El torneo ya comenzó — los pronósticos de fase de grupos están cerrados.'}
+                    : 'El plazo de la fase de grupos ya cerró — los pronósticos están cerrados.'}
                 </p>
               </div>
             </div>
@@ -284,7 +316,7 @@ export default function PredictionsPage() {
             <div className="mt-4 flex flex-wrap gap-2">
               <button
                 onClick={() => setModal('lock')}
-                disabled={savedCount === 0}
+                disabled={!hasSaved}
                 className="flex items-center gap-2 rounded-xl bg-green-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
               >
                 <Lock className="h-4 w-4" />
@@ -292,7 +324,7 @@ export default function PredictionsPage() {
               </button>
               <button
                 onClick={() => setModal('clear')}
-                disabled={savedCount === 0}
+                disabled={!hasSaved}
                 className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 hover:border-red-500/40 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
@@ -328,8 +360,15 @@ export default function PredictionsPage() {
                       match={match}
                       prediction={predMap.get(match.id)}
                       globalLocked={isGloballyLocked}
+                      canPredict={canPredictMatch(match)}
+                      inUserPool={inUserPool(match)}
                       clearTrigger={clearTrigger}
-                      onSaved={(id) => setSavedIds((s) => new Set(s).add(id))}
+                      onSaved={(id) => {
+                        setSavedIds((s) => new Set(s).add(id));
+                        queryClient.invalidateQueries({
+                          queryKey: ['predictions', 'group-stage', 'status'],
+                        });
+                      }}
                     />
                   ))}
                 </div>
@@ -341,7 +380,7 @@ export default function PredictionsPage() {
               <div className="border-t border-slate-800/60 pt-6 flex flex-wrap gap-2">
                 <button
                   onClick={() => setModal('lock')}
-                  disabled={savedCount === 0}
+                  disabled={!hasSaved}
                   className="flex items-center gap-2 rounded-xl bg-green-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-green-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-500/20"
                 >
                   <Lock className="h-4 w-4" />
@@ -349,7 +388,7 @@ export default function PredictionsPage() {
                 </button>
                 <button
                   onClick={() => setModal('clear')}
-                  disabled={savedCount === 0}
+                  disabled={!hasSaved}
                   className="flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-400 hover:border-red-500/40 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   <Trash2 className="h-4 w-4" />
