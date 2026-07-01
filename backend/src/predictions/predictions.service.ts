@@ -9,6 +9,11 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { UpsertPredictionDto } from './dto/upsert-prediction.dto.js';
 import { BulkPredictionsDto } from './dto/bulk-predictions.dto.js';
 import { GroupStagePoolService } from './group-stage-pool.service.js';
+import {
+  KNOCKOUT_LEAD_TIME_KEY,
+  isKnockoutEditable,
+  parseLeadMinutes,
+} from './knockout-window.util.js';
 
 @Injectable()
 export class PredictionsService {
@@ -20,8 +25,9 @@ export class PredictionsService {
   /**
    * Group stage: per-user personal pool + a single global deadline
    *              (SystemConfig.group_stage_deadline_at). See GroupStagePoolService.
-   * Knockout: each stage has its own deadline = first match of that specific stage.
-   *           Stage must also be explicitly activated by admin in SystemConfig.
+   * Knockout: each *match* has its own deadline = leadMinutes before its kickoff
+   *           (see knockout-window.util). Stage must also be explicitly activated
+   *           by admin in SystemConfig.
    */
   private async assertPhaseOpen(userId: string, matchId: string) {
     const match = await this.prisma.match.findUnique({ where: { id: matchId } });
@@ -74,18 +80,23 @@ export class PredictionsService {
         throw new ForbiddenException('You have already finalized your predictions for this stage');
       }
 
-      // Auto-lock when first match of this specific stage kicks off
-      const firstMatch = await this.prisma.match.findFirst({
-        where: { stage: match.stage },
-        orderBy: { scheduledAt: 'asc' },
-        select: { scheduledAt: true },
-      });
-      if (firstMatch && firstMatch.scheduledAt <= new Date()) {
-        throw new BadRequestException('Predictions are closed for this stage');
+      // Per-match window: closes leadMinutes before THIS match's kickoff, so a
+      // user can still predict later matches of the round after earlier ones start.
+      const leadMinutes = await this.getKnockoutLeadMinutes();
+      if (!isKnockoutEditable(match.scheduledAt, leadMinutes, new Date())) {
+        throw new BadRequestException('El plazo para pronosticar este partido ya cerró');
       }
     }
 
     return match;
+  }
+
+  /** Knockout prediction lead time (minutes before kickoff), from SystemConfig. */
+  private async getKnockoutLeadMinutes(): Promise<number> {
+    const config = await this.prisma.systemConfig.findUnique({
+      where: { key: KNOCKOUT_LEAD_TIME_KEY },
+    });
+    return parseLeadMinutes(config?.value);
   }
 
   async upsert(userId: string, matchId: string, dto: UpsertPredictionDto) {
@@ -194,21 +205,27 @@ export class PredictionsService {
       throw new BadRequestException('Predictions for this stage are already finalized');
     }
 
-    // First kickoff must not have passed
-    const firstMatch = await this.prisma.match.findFirst({
+    // Finalizing is optional now (each match auto-closes leadMinutes before its
+    // own kickoff). Only block once the WHOLE round is already closed — there is
+    // nothing left to lock — otherwise let the user commit early.
+    const now = new Date();
+    const leadMinutes = await this.getKnockoutLeadMinutes();
+    const stageMatches = await this.prisma.match.findMany({
       where: { stage },
-      orderBy: { scheduledAt: 'asc' },
       select: { scheduledAt: true },
     });
-    if (firstMatch && firstMatch.scheduledAt <= new Date()) {
-      throw new BadRequestException('Cannot finalize — this stage has already started');
+    const anyOpen = stageMatches.some((m) =>
+      isKnockoutEditable(m.scheduledAt, leadMinutes, now),
+    );
+    if (!anyOpen) {
+      throw new BadRequestException('Cannot finalize — this stage is already closed');
     }
 
     // Require ALL matches for this stage to have a prediction
-    const [totalStageMatches, predCount] = await Promise.all([
-      this.prisma.match.count({ where: { stage } }),
-      this.prisma.prediction.count({ where: { userId, match: { stage } } }),
-    ]);
+    const [totalStageMatches, predCount] = [
+      stageMatches.length,
+      await this.prisma.prediction.count({ where: { userId, match: { stage } } }),
+    ];
     if (predCount < totalStageMatches) {
       throw new BadRequestException(
         `Debes completar los ${totalStageMatches} pronósticos de esta fase antes de finalizar (llevas ${predCount})`,
@@ -219,22 +236,28 @@ export class PredictionsService {
   }
 
   async deleteByStage(userId: string, stage: MatchStage) {
-    const firstMatch = await this.prisma.match.findFirst({
-      where: { stage },
-      orderBy: { scheduledAt: 'asc' },
-      select: { scheduledAt: true },
+    // A user manually finalized this stage → nothing is editable anymore.
+    const userLock = await this.prisma.userStageLock.findUnique({
+      where: { userId_stage: { userId, stage } },
     });
-
-    if (firstMatch && firstMatch.scheduledAt <= new Date()) {
-      throw new ForbiddenException('Cannot delete predictions — this stage has already started');
+    if (userLock) {
+      throw new ForbiddenException('Cannot delete predictions — this stage is finalized');
     }
 
-    const matchIds = await this.prisma.match
-      .findMany({ where: { stage }, select: { id: true } })
-      .then((ms) => ms.map((m) => m.id));
+    // Only clear predictions on matches whose window is still open. Matches that
+    // already closed can't be re-entered, so leave them untouched.
+    const now = new Date();
+    const leadMinutes = await this.getKnockoutLeadMinutes();
+    const matches = await this.prisma.match.findMany({
+      where: { stage },
+      select: { id: true, scheduledAt: true },
+    });
+    const openIds = matches
+      .filter((m) => isKnockoutEditable(m.scheduledAt, leadMinutes, now))
+      .map((m) => m.id);
 
     const { count } = await this.prisma.prediction.deleteMany({
-      where: { userId, matchId: { in: matchIds } },
+      where: { userId, matchId: { in: openIds } },
     });
     return { deleted: count };
   }
