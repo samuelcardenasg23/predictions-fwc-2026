@@ -143,6 +143,8 @@ Endpoints principales:
 | `DELETE` | `/api/admin/matches/:id` | Eliminar partido |
 | `POST` | `/api/admin/stages/:stage/activate` | Activar fase knockout |
 | `GET` | `/api/admin/stages/status` | Estado de fases (admin) |
+| `GET` | `/api/admin/config/prediction-lead-time` | Minutos de cierre antes de cada partido knockout |
+| `PUT` | `/api/admin/config/prediction-lead-time` | Actualizar el tiempo de cierre (default 60 min) |
 
 ## Licencia
 
