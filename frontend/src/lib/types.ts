@@ -25,6 +25,10 @@ export interface Match {
   groupName: string | null;
   matchOrder: number | null;
   excludedFromPool: boolean;
+  /** Knockout only: instant the per-match prediction window closes (ISO). Null for group. */
+  predictionCloseAt?: string | null;
+  /** Knockout only: whether this match can still be predicted right now. Null for group. */
+  editable?: boolean | null;
 }
 
 export interface Prediction {

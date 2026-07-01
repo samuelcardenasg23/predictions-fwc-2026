@@ -513,6 +513,97 @@ function StageSection({
   );
 }
 
+function formatLeadWindow(minutes: number): string {
+  if (minutes <= 0) return 'al inicio de cada partido';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const parts: string[] = [];
+  if (h > 0) parts.push(`${h} ${h === 1 ? 'hora' : 'horas'}`);
+  if (m > 0) parts.push(`${m} ${m === 1 ? 'minuto' : 'minutos'}`);
+  return `${parts.join(' y ')} antes de cada partido`;
+}
+
+function LeadTimeConfig() {
+  const queryClient = useQueryClient();
+  const [value, setValue] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const { data } = useQuery<{ minutes: number }>({
+    queryKey: ['prediction-lead-time'],
+    queryFn: () => api.get('/admin/config/prediction-lead-time').then((r) => r.data),
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (data) setValue(String(data.minutes));
+  }, [data]);
+
+  const parsed = parseInt(value, 10);
+  const valid = !isNaN(parsed) && parsed >= 0 && parsed <= 10080;
+  const dirty = data !== undefined && String(data.minutes) !== value;
+
+  async function save() {
+    if (!valid) {
+      toast.error('Ingresa un número de minutos válido (0–10080)');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.put('/admin/config/prediction-lead-time', { minutes: parsed });
+      toast.success('Tiempo de cierre actualizado');
+      queryClient.invalidateQueries({ queryKey: ['prediction-lead-time'] });
+      queryClient.invalidateQueries({ queryKey: ['stages-status'] });
+      queryClient.invalidateQueries({ queryKey: ['matches'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-matches'] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? 'Error al guardar');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Lock className="h-4 w-4 text-amber-400" />
+        <h3 className="text-sm font-bold text-slate-200">Cierre de pronósticos</h3>
+      </div>
+      <p className="text-xs text-slate-500 mb-3">
+        Cada partido de eliminatorias se cierra este tiempo antes de su propio inicio.
+        Aplica a todas las fases knockout.
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Minutos antes
+          </label>
+          <input
+            type="number"
+            min={0}
+            max={10080}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="w-28 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+          />
+        </div>
+        <button
+          onClick={save}
+          disabled={saving || !valid || !dirty}
+          className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        >
+          <Check className="h-4 w-4" />
+          {saving ? 'Guardando…' : 'Guardar'}
+        </button>
+        {valid && (
+          <span className="text-xs text-slate-500 pb-2">
+            Cierra {formatLeadWindow(parsed)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ManagePhasesTab({ matches, onInvalidate }: { matches: Match[] | undefined; onInvalidate: () => void }) {
   const { data: statuses } = useQuery<Record<MatchStage, KnockoutStageStatus>>({
     queryKey: ['stages-status'],
@@ -527,6 +618,7 @@ function ManagePhasesTab({ matches, onInvalidate }: { matches: Match[] | undefin
 
   return (
     <div className="space-y-3">
+      <LeadTimeConfig />
       <p className="text-sm text-slate-400">
         Crea los partidos de cada fase eliminatoria una vez que los equipos estén definidos. Activa la fase para abrir predicciones.
       </p>

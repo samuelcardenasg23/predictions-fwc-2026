@@ -86,7 +86,12 @@ export function MatchCard({
   onSaved,
 }: Props) {
   const started = new Date(match.scheduledAt).getTime() <= Date.now();
-  const isLocked = readOnly || globalLocked || !canPredict;
+  // Knockout matches carry a per-match window (`predictionCloseAt`); group matches
+  // don't. Evaluate the close live so the lock flips without waiting for a refetch.
+  const isKnockoutWindow = match.predictionCloseAt != null;
+  const windowClosed =
+    isKnockoutWindow && new Date(match.predictionCloseAt!).getTime() <= Date.now();
+  const isLocked = readOnly || globalLocked || !canPredict || windowClosed;
   const isLive = match.status === 'LIVE';
   const isFinished = match.status === 'FINISHED';
   const hasResult = match.homeScore != null && match.awayScore != null;
@@ -101,6 +106,22 @@ export function MatchCard({
       blockReason = 'Partido finalizado';
     } else if (!inUserPool) {
       blockReason = 'Fuera de tu quiniela';
+    }
+  }
+  // Knockout per-match window hint (only when the round as a whole isn't locked).
+  let windowBadge: { text: string; closed: boolean } | null = null;
+  if (isKnockoutWindow && !globalLocked && !isLive && !isFinished) {
+    if (windowClosed) {
+      windowBadge = { text: 'Pronóstico cerrado', closed: true };
+    } else if (match.predictionCloseAt) {
+      const closeStr = new Date(match.predictionCloseAt).toLocaleString('es-CO', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'America/Bogota',
+      });
+      windowBadge = { text: `Cierra ${closeStr}`, closed: false };
     }
   }
   const [home, setHome] = useState(prediction?.homeScore?.toString() ?? '');
@@ -187,6 +208,27 @@ export function MatchCard({
       {blockReason && (
         <div className="absolute -top-px right-4 rounded-b-md bg-slate-800 border border-slate-700/60 px-2 py-0.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/80">{blockReason}</span>
+        </div>
+      )}
+
+      {/* Knockout per-match window: closes leadMinutes before kickoff */}
+      {windowBadge && (
+        <div
+          className={cn(
+            'absolute -top-px right-4 rounded-b-md border px-2 py-0.5',
+            windowBadge.closed
+              ? 'bg-slate-800 border-slate-700/60'
+              : 'bg-amber-500/5 border-amber-500/20',
+          )}
+        >
+          <span
+            className={cn(
+              'text-[10px] font-semibold uppercase tracking-wider',
+              windowBadge.closed ? 'text-slate-500' : 'text-amber-400/80',
+            )}
+          >
+            {windowBadge.text}
+          </span>
         </div>
       )}
 

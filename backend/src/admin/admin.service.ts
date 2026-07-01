@@ -6,6 +6,11 @@ import { EmailService } from '../email/email.service.js';
 import { CreateMatchesBatchDto } from './dto/create-matches-batch.dto.js';
 import { CreateMatchDto } from './dto/create-match.dto.js';
 import { UpdateMatchTeamsDto } from './dto/update-match-teams.dto.js';
+import {
+  KNOCKOUT_LEAD_TIME_KEY,
+  isKnockoutEditable,
+  parseLeadMinutes,
+} from '../predictions/knockout-window.util.js';
 
 const KNOCKOUT_STAGES: MatchStage[] = ['R32', 'R16', 'QF', 'SF', 'THIRD_PLACE', 'FINAL'];
 
@@ -50,7 +55,8 @@ export class AdminService {
       select: { email: true, name: true },
     });
 
-    await this.email.sendStageActivation(stage, users, firstMatch.scheduledAt);
+    const leadMinutes = parseLeadMinutes(await this.getConfig(KNOCKOUT_LEAD_TIME_KEY));
+    await this.email.sendStageActivation(stage, users, leadMinutes);
     await this.setConfig(stageOpenKey(stage), 'true');
 
     this.logger.log(`Stage ${stage} activated — notified ${users.length} users`);
@@ -59,6 +65,7 @@ export class AdminService {
 
   async getStagesStatus(): Promise<Record<MatchStage, 'inactive' | 'open' | 'locked'>> {
     const now = new Date();
+    const leadMinutes = parseLeadMinutes(await this.getConfig(KNOCKOUT_LEAD_TIME_KEY));
     const result = {} as Record<MatchStage, 'inactive' | 'open' | 'locked'>;
 
     for (const stage of KNOCKOUT_STAGES) {
@@ -68,19 +75,22 @@ export class AdminService {
         continue;
       }
 
-      const firstMatch = await this.prisma.match.findFirst({
+      const matches = await this.prisma.match.findMany({
         where: { stage },
-        orderBy: { scheduledAt: 'asc' },
         select: { scheduledAt: true },
       });
 
-      result[stage] = firstMatch && firstMatch.scheduledAt <= now ? 'locked' : 'open';
+      // Locked only when every match's per-match window has closed.
+      const anyOpen =
+        matches.length === 0 ||
+        matches.some((m) => isKnockoutEditable(m.scheduledAt, leadMinutes, now));
+      result[stage] = anyOpen ? 'open' : 'locked';
     }
 
     return result;
   }
 
-  // Runs daily at 12:00 UTC. Sends a 24h reminder for each activated stage approaching its deadline.
+  // Runs daily at 12:00 UTC. Nudges users ~24h before each activated stage's first match.
   @Cron('0 12 * * *')
   async sendStageRemindersIfDue(): Promise<void> {
     const now = new Date();
@@ -101,9 +111,23 @@ export class AdminService {
 
       this.logger.log(`Sending 24h reminder for stage ${stage}…`);
       const users = await this.prisma.user.findMany({ select: { email: true, name: true } });
-      await this.email.sendStageReminder(stage, users, firstMatch.scheduledAt);
+      const leadMinutes = parseLeadMinutes(await this.getConfig(KNOCKOUT_LEAD_TIME_KEY));
+      await this.email.sendStageReminder(stage, users, leadMinutes);
       await this.setConfig(stageReminderKey(stage), 'true');
     }
+  }
+
+  /** Current knockout prediction lead time (minutes before each match's kickoff). */
+  async getPredictionLeadTime(): Promise<{ minutes: number }> {
+    const value = await this.getConfig(KNOCKOUT_LEAD_TIME_KEY);
+    return { minutes: parseLeadMinutes(value) };
+  }
+
+  /** Update the knockout prediction lead time. */
+  async setPredictionLeadTime(minutes: number): Promise<{ minutes: number }> {
+    await this.setConfig(KNOCKOUT_LEAD_TIME_KEY, String(minutes));
+    this.logger.log(`Prediction lead time set to ${minutes} minutes`);
+    return { minutes };
   }
 
   async createMatchesBatch(dto: CreateMatchesBatchDto): Promise<{ created: number }> {
@@ -184,14 +208,14 @@ export class AdminService {
   }
 
   async sendTestStageActivation(to: string, stage: MatchStage): Promise<{ message: string }> {
-    const deadline = new Date('2026-07-04T18:00:00.000Z');
-    await this.email.sendStageActivation(stage, [{ email: to, name: 'Participante' }], deadline);
+    const leadMinutes = parseLeadMinutes(await this.getConfig(KNOCKOUT_LEAD_TIME_KEY));
+    await this.email.sendStageActivation(stage, [{ email: to, name: 'Participante' }], leadMinutes);
     return { message: `Stage activation email (${stage}) sent to ${to}` };
   }
 
   async sendTestStageReminder(to: string, stage: MatchStage): Promise<{ message: string }> {
-    const deadline = new Date('2026-07-04T18:00:00.000Z');
-    await this.email.sendStageReminder(stage, [{ email: to, name: 'Participante' }], deadline);
+    const leadMinutes = parseLeadMinutes(await this.getConfig(KNOCKOUT_LEAD_TIME_KEY));
+    await this.email.sendStageReminder(stage, [{ email: to, name: 'Participante' }], leadMinutes);
     return { message: `Stage reminder email (${stage}) sent to ${to}` };
   }
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
 import { MatchStage } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { AdminGuard } from '../auth/guards/admin.guard.js';
@@ -6,6 +6,7 @@ import { AdminService } from './admin.service.js';
 import { CreateMatchesBatchDto } from './dto/create-matches-batch.dto.js';
 import { CreateMatchDto } from './dto/create-match.dto.js';
 import { UpdateMatchTeamsDto } from './dto/update-match-teams.dto.js';
+import { SetLeadTimeDto } from './dto/set-lead-time.dto.js';
 
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin')
@@ -45,6 +46,17 @@ export class AdminController {
   @Get('stages/status')
   getStagesStatus() {
     return this.adminService.getStagesStatus();
+  }
+
+  @Get('config/prediction-lead-time')
+  getPredictionLeadTime() {
+    return this.adminService.getPredictionLeadTime();
+  }
+
+  @Put('config/prediction-lead-time')
+  @HttpCode(HttpStatus.OK)
+  setPredictionLeadTime(@Body() dto: SetLeadTimeDto) {
+    return this.adminService.setPredictionLeadTime(dto.minutes);
   }
 
   @Post('test-email')

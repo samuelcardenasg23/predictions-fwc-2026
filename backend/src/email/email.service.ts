@@ -77,27 +77,35 @@ export class EmailService implements OnModuleInit {
     this.logger.log('Email provider: SMTP');
   }
 
-  async sendStageActivation(stage: MatchStage, recipients: Recipient[], deadline: Date): Promise<void> {
+  async sendStageActivation(
+    stage: MatchStage,
+    recipients: Recipient[],
+    leadMinutes: number,
+  ): Promise<void> {
     const label = STAGE_LABELS[stage];
-    const deadlineStr = this.formatDate(deadline);
+    const window = this.formatLeadWindow(leadMinutes);
     const url = `${this.frontendUrl}${STAGE_URLS[stage]}`;
 
     await this.sendBatch(
       recipients,
       `🏆 ¡${label} abierta! — Quiniela FWC 2026`,
-      (name) => this.activationHtml(name, label, deadlineStr, url),
+      (name) => this.activationHtml(name, label, window, url),
     );
   }
 
-  async sendStageReminder(stage: MatchStage, recipients: Recipient[], deadline: Date): Promise<void> {
+  async sendStageReminder(
+    stage: MatchStage,
+    recipients: Recipient[],
+    leadMinutes: number,
+  ): Promise<void> {
     const label = STAGE_LABELS[stage];
-    const deadlineStr = this.formatDate(deadline);
+    const window = this.formatLeadWindow(leadMinutes);
     const url = `${this.frontendUrl}${STAGE_URLS[stage]}`;
 
     await this.sendBatch(
       recipients,
-      `⏰ Recordatorio: 24h para cerrar ${label} — Quiniela FWC 2026`,
-      (name) => this.reminderHtml(name, label, deadlineStr, url),
+      `⏰ ${label} arranca pronto — Quiniela FWC 2026`,
+      (name) => this.reminderHtml(name, label, window, url),
     );
   }
 
@@ -157,28 +165,28 @@ export class EmailService implements OnModuleInit {
     }
   }
 
-  private formatDate(date: Date): string {
-    return date.toLocaleDateString('es-CO', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'America/Bogota',
-    });
+  /** Human phrase for the per-match window, e.g. "hasta 1 hora antes de cada partido". */
+  private formatLeadWindow(leadMinutes: number): string {
+    if (leadMinutes <= 0) return 'hasta el inicio de cada partido';
+    const h = Math.floor(leadMinutes / 60);
+    const m = leadMinutes % 60;
+    const parts: string[] = [];
+    if (h > 0) parts.push(`${h} ${h === 1 ? 'hora' : 'horas'}`);
+    if (m > 0) parts.push(`${m} ${m === 1 ? 'minuto' : 'minutos'}`);
+    return `hasta ${parts.join(' y ')} antes de cada partido`;
   }
 
-  private activationHtml(name: string, label: string, deadline: string, url: string): string {
+  private activationHtml(name: string, label: string, window: string, url: string): string {
     return `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
         <h1 style="color:#1a1a1a">¡Hola, ${name}! 🏆</h1>
         <p style="font-size:16px;color:#333">
           Los pronósticos de <strong>${label}</strong> ya están abiertos.
-          Entra y registra tus predicciones antes de que arranquen los partidos.
+          Puedes guardar todos de una vez o poco a poco.
         </p>
         <p style="font-size:16px;color:#333">
-          <strong>Fecha límite: ${deadline} (hora Colombia)</strong>
+          <strong>Ahora puedes ingresar o modificar tus resultados ${window}.</strong>
+          Cada partido cierra por su cuenta, así que no tienes que hacerlos todos juntos.
         </p>
         <a href="${url}"
            style="display:inline-block;margin-top:16px;padding:12px 24px;
@@ -193,16 +201,16 @@ export class EmailService implements OnModuleInit {
     `;
   }
 
-  private reminderHtml(name: string, label: string, deadline: string, url: string): string {
+  private reminderHtml(name: string, label: string, window: string, url: string): string {
     return `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
-        <h1 style="color:#1a1a1a">¡Últimas 24 horas, ${name}! ⏰</h1>
+        <h1 style="color:#1a1a1a">¡${label} arranca pronto, ${name}! ⏰</h1>
         <p style="font-size:16px;color:#333">
-          Los pronósticos de <strong>${label}</strong> cierran el
-          <strong>${deadline} (hora Colombia)</strong>.
+          Recuerda que puedes ingresar o modificar tus pronósticos de
+          <strong>${label}</strong> ${window}.
         </p>
         <p style="font-size:16px;color:#333">
-          Si aún te faltan partidos por pronosticar, ¡entra ahora!
+          Si aún te faltan partidos por pronosticar, ¡entra ahora antes de que empiecen!
         </p>
         <a href="${url}"
            style="display:inline-block;margin-top:16px;padding:12px 24px;
